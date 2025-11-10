@@ -10,13 +10,7 @@ import "context"
 //   Generate(ctx, genFunc)                      // unbuffered
 //   Generate(ctx, genFunc, WithBuffer[int](10)) // buffered with size 10
 func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...ChanOption[T]) <-chan T {
-	cfg := &chanConfig[T]{bufferSize: 0}
-
-	for _, opt := range opts {
-		opt(cfg)
-	}
-
-	ch := make(chan T, cfg.bufferSize)
+	ch := applyChanOptions(opts...)
 	go func() {
 		defer close(ch)
 		for {
@@ -36,5 +30,28 @@ func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...Chan
 			}
 		}
 	}()
+	return ch
+}
+
+// Repeat creates a channel that infinitely repeats the given value.
+// The channel will close when the context is cancelled.
+//
+// Examples:
+//   Repeat(ctx, 42)                      // unbuffered, repeats 42 forever
+//   Repeat(ctx, "x", WithBuffer[string](5)) // buffered
+func Repeat[T any](ctx context.Context, value T, opts ...ChanOption[T]) <-chan T {
+	ch := applyChanOptions(opts...)
+
+	go func() {
+		defer close(ch)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- value:
+			}
+		}
+	}()
+
 	return ch
 }

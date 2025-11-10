@@ -2,29 +2,6 @@ package chankit
 
 import "context"
 
-// ChanOption is a functional option for configuring channel behavior
-type ChanOption[T any] func(*chanConfig[T])
-
-// chanConfig holds configuration for channel creation
-type chanConfig[T any] struct {
-	bufferSize int
-}
-
-// WithBuffer sets a custom buffer size for the channel
-func WithBuffer[T any](size int) ChanOption[T] {
-	return func(cfg *chanConfig[T]) {
-		cfg.bufferSize = size
-	}
-}
-
-// WithBufferAuto sets the buffer size to match the input slice length
-// This allows the producer goroutine to finish immediately without blocking
-func WithBufferAuto[T any]() ChanOption[T] {
-	return func(cfg *chanConfig[T]) {
-		cfg.bufferSize = -1 // sentinel value for auto-sizing
-	}
-}
-
 // SliceToChan converts a slice to a channel, sending each element sequentially.
 // By default, uses an unbuffered channel. Use WithBuffer() or WithBufferAuto() to change behavior.
 //
@@ -33,18 +10,16 @@ func WithBufferAuto[T any]() ChanOption[T] {
 //   SliceToChan(ctx, slice, WithBuffer[int](10))      // buffered with size 10
 //   SliceToChan(ctx, slice, WithBufferAuto[int]())    // buffered to slice length
 func SliceToChan[T any](ctx context.Context, slice []T, opts ...ChanOption[T]) <-chan T {
-	cfg := &chanConfig[T]{bufferSize: 0} // unbuffered by default
-
+	cfg := &chanConfig[T]{bufferSize: 0}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	bufferSize := cfg.bufferSize
-	if bufferSize == -1 {
-		bufferSize = len(slice)
+	if cfg.bufferSize == -1 {
+		opts = []ChanOption[T]{WithBuffer[T](len(slice))}
 	}
 
-	ch := make(chan T, bufferSize)
+	ch := applyChanOptions(opts...)
 	go func() {
 		defer close(ch)
 
