@@ -55,3 +55,40 @@ func Repeat[T any](ctx context.Context, value T, opts ...ChanOption[T]) <-chan T
 
 	return ch
 }
+
+// Range creates a channel that produces values from start to end (exclusive) with the given step.
+// For positive steps: generates [start, start+step, start+2*step, ...) while i < end
+// For negative steps: generates [start, start+step, start+2*step, ...) while i > end
+//
+// Examples:
+//   Range(ctx, 0, 10, 1)           // 0, 1, 2, ..., 9
+//   Range(ctx, 10, 0, -1)          // 10, 9, 8, ..., 1
+//   Range(ctx, 0, 5, 2)            // 0, 2, 4
+//   Range(ctx, 0, 10, 1, WithBuffer[int](5))  // buffered
+func Range[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64](ctx context.Context, start, end, step T, opts ...ChanOption[T]) <-chan T {
+	ch := applyChanOptions(opts...)
+
+	go func() {
+		defer close(ch)
+
+		if step > 0 {
+			for i := start; i < end; i += step {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- i:
+				}
+			}
+		} else if step < 0 {
+			for i := start; i > end; i += step {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- i:
+				}
+			}
+		}
+	}()
+
+	return ch
+}
