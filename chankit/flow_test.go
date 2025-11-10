@@ -992,3 +992,452 @@ func TestBatch(t *testing.T) {
 		}
 	})
 }
+
+// TestDebounce tests the Debounce function
+func TestDebounce(t *testing.T) {
+	t.Run("basic debounce behavior", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 100 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		// Send values rapidly
+		go func() {
+			for i := 1; i <= 5; i++ {
+				in <- i
+				time.Sleep(20 * time.Millisecond)
+			}
+			// Wait for debounce to settle
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive only the last value (5) after silence
+		if len(results) != 1 {
+			t.Fatalf("expected 1 value, got %d: %v", len(results), results)
+		}
+		if results[0] != 5 {
+			t.Errorf("expected value 5, got %d", results[0])
+		}
+	})
+
+	t.Run("emits each value after silence period", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 80 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			// First burst
+			in <- 1
+			in <- 2
+			in <- 3
+			// Wait for debounce
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+
+			// Second burst
+			in <- 4
+			in <- 5
+			// Wait for debounce
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive 2 values (3 and 5)
+		expected := []int{3, 5}
+		if len(results) != len(expected) {
+			t.Fatalf("expected %d values, got %d: %v", len(expected), len(results), results)
+		}
+		for i, v := range results {
+			if v != expected[i] {
+				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
+			}
+		}
+	})
+
+	t.Run("single value is emitted after duration", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 50 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		start := time.Now()
+
+		go func() {
+			in <- 42
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			close(in)
+		}()
+
+		val := <-out
+		elapsed := time.Since(start)
+
+		if val != 42 {
+			t.Errorf("expected value 42, got %d", val)
+		}
+
+		// Should take at least debounceDuration
+		if elapsed < debounceDuration {
+			t.Errorf("value emitted too early: %v (expected >= %v)", elapsed, debounceDuration)
+		}
+	})
+
+	t.Run("timer resets on each new value", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 100 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			// Send values every 60ms (within debounce window)
+			for i := 1; i <= 5; i++ {
+				in <- i
+				time.Sleep(60 * time.Millisecond)
+			}
+			// Final wait for debounce
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive only the last value (timer kept resetting)
+		if len(results) != 1 {
+			t.Fatalf("expected 1 value (timer should have reset), got %d: %v", len(results), results)
+		}
+		if results[0] != 5 {
+			t.Errorf("expected value 5, got %d", results[0])
+		}
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		in := make(chan int)
+		debounceDuration := 100 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			in <- 1
+			in <- 2
+			time.Sleep(50 * time.Millisecond)
+			cancel()
+		}()
+
+		// Channel should close without emitting (cancelled before debounce)
+		timeout := time.After(200 * time.Millisecond)
+		count := 0
+		for {
+			select {
+			case _, ok := <-out:
+				if !ok {
+					// Channel closed
+					if count > 0 {
+						t.Errorf("expected no values before cancellation, got %d", count)
+					}
+					return
+				}
+				count++
+			case <-timeout:
+				t.Fatal("channel did not close after context cancellation")
+			}
+		}
+	})
+
+	t.Run("emits final value on input channel close", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 100 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			in <- 1
+			in <- 2
+			in <- 3
+			// Close immediately without waiting for debounce
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should emit the final pending value (3) immediately on close
+		if len(results) != 1 {
+			t.Fatalf("expected 1 value, got %d: %v", len(results), results)
+		}
+		if results[0] != 3 {
+			t.Errorf("expected value 3, got %d", results[0])
+		}
+	})
+
+	t.Run("no values if input closes immediately", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 50 * time.Millisecond
+
+		close(in)
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		if len(results) != 0 {
+			t.Errorf("expected 0 values, got %d: %v", len(results), results)
+		}
+	})
+
+	t.Run("with buffered output channel", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 50 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration, WithBuffer[int](3))
+
+		go func() {
+			// Burst 1
+			in <- 1
+			in <- 2
+			time.Sleep(debounceDuration + 20*time.Millisecond)
+
+			// Burst 2
+			in <- 3
+			in <- 4
+			time.Sleep(debounceDuration + 20*time.Millisecond)
+
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		expected := []int{2, 4}
+		if len(results) != len(expected) {
+			t.Fatalf("expected %d values, got %d", len(expected), len(results))
+		}
+		for i, v := range results {
+			if v != expected[i] {
+				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
+			}
+		}
+	})
+
+	t.Run("slow input values pass through", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 50 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			in <- 1
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			in <- 2
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			in <- 3
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Each value has enough silence after it
+		expected := []int{1, 2, 3}
+		if len(results) != len(expected) {
+			t.Fatalf("expected %d values, got %d: %v", len(expected), len(results), results)
+		}
+		for i, v := range results {
+			if v != expected[i] {
+				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
+			}
+		}
+	})
+
+	t.Run("multiple rapid bursts", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 80 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			// Burst 1: values 1-5
+			for i := 1; i <= 5; i++ {
+				in <- i
+				time.Sleep(10 * time.Millisecond)
+			}
+			time.Sleep(debounceDuration + 30*time.Millisecond)
+
+			// Burst 2: values 6-10
+			for i := 6; i <= 10; i++ {
+				in <- i
+				time.Sleep(10 * time.Millisecond)
+			}
+			time.Sleep(debounceDuration + 30*time.Millisecond)
+
+			// Burst 3: values 11-15
+			for i := 11; i <= 15; i++ {
+				in <- i
+				time.Sleep(10 * time.Millisecond)
+			}
+			time.Sleep(debounceDuration + 30*time.Millisecond)
+
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive last value from each burst: 5, 10, 15
+		expected := []int{5, 10, 15}
+		if len(results) != len(expected) {
+			t.Fatalf("expected %d values, got %d: %v", len(expected), len(results), results)
+		}
+		for i, v := range results {
+			if v != expected[i] {
+				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
+			}
+		}
+	})
+
+	t.Run("very short debounce duration", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 10 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			for i := 1; i <= 5; i++ {
+				in <- i
+				time.Sleep(5 * time.Millisecond)
+			}
+			time.Sleep(debounceDuration + 20*time.Millisecond)
+			close(in)
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// With very short duration, should still debounce
+		if len(results) == 0 {
+			t.Fatal("expected at least one value")
+		}
+		// Should receive the last value
+		if results[len(results)-1] != 5 {
+			t.Errorf("expected last value 5, got %d", results[len(results)-1])
+		}
+	})
+
+	t.Run("context cancellation with pending value", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		in := make(chan int)
+		debounceDuration := 200 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		go func() {
+			in <- 1
+			in <- 2
+			in <- 3
+			time.Sleep(50 * time.Millisecond)
+			cancel() // Cancel before debounce completes
+		}()
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Pending value should be lost on cancellation
+		if len(results) != 0 {
+			t.Errorf("expected 0 values after cancellation, got %d: %v", len(results), results)
+		}
+	})
+
+	t.Run("exact timing validation", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		debounceDuration := 100 * time.Millisecond
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		start := time.Now()
+
+		go func() {
+			in <- 1
+			time.Sleep(debounceDuration + 50*time.Millisecond)
+			close(in)
+		}()
+
+		<-out // Receive the value
+		elapsed := time.Since(start)
+
+		// Should take approximately debounceDuration
+		expectedMin := debounceDuration
+		expectedMax := debounceDuration + 50*time.Millisecond
+
+		if elapsed < expectedMin || elapsed > expectedMax {
+			t.Errorf("expected elapsed time between %v and %v, got %v", expectedMin, expectedMax, elapsed)
+		}
+	})
+
+	t.Run("burst then immediate close", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 10)
+		debounceDuration := 100 * time.Millisecond
+
+		// Pre-buffer values
+		for i := 1; i <= 5; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Debounce(ctx, in, debounceDuration)
+
+		var results []int
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should emit the last buffered value immediately
+		if len(results) != 1 {
+			t.Fatalf("expected 1 value, got %d: %v", len(results), results)
+		}
+		if results[0] != 5 {
+			t.Errorf("expected value 5, got %d", results[0])
+		}
+	})
+}

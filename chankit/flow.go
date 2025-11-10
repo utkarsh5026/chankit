@@ -175,3 +175,71 @@ func Batch[T any](ctx context.Context, in <-chan T, batchSize int, timeout time.
 
 	return outChan
 }
+
+// Debounce emits values from input only after the specified duration has elapsed
+// without any new values arriving. If a new value arrives before the duration
+// elapses, the timer is reset. This is useful for handling rapid bursts of events
+// where you only want to process the final value after activity stops.
+//
+// Example:
+//
+//	Input:  [1, 2, 3] (arrive within 100ms of each other)
+//	Duration: 100ms
+//	Output: [3] (only after 100ms of silence after receiving 3)
+func Debounce[T any](ctx context.Context, in <-chan T, d time.Duration, opts ...ChanOption[T]) <-chan T {
+	outChan := applyChanOptions(opts...)
+
+	go func() {
+		defer close(outChan)
+
+		var timer *time.Timer
+		var timerCh <-chan time.Time
+		var pending *T
+
+		for {
+			select {
+			case <-ctx.Done():
+				if timer != nil {
+					timer.Stop()
+				}
+				return
+
+			case val, ok := <-in:
+				if !ok {
+					if pending != nil {
+						select {
+						case outChan <- *pending:
+						case <-ctx.Done():
+						}
+					}
+					if timer != nil {
+						timer.Stop()
+					}
+					return
+				}
+
+				pending = &val
+
+				if timer == nil {
+					timer = time.NewTimer(d)
+					timerCh = timer.C
+				} else {
+					timer.Stop()
+					timer.Reset(d)
+				}
+
+			case <-timerCh:
+				if pending != nil {
+					select {
+					case outChan <- *pending:
+						pending = nil
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return outChan
+}
