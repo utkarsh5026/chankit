@@ -527,3 +527,468 @@ func TestFixedInterval(t *testing.T) {
 		}
 	})
 }
+
+// TestBatch tests the Batch function
+func TestBatch(t *testing.T) {
+	t.Run("batches by size", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 10)
+		batchSize := 3
+		timeout := 1 * time.Second
+
+		// Send 9 values (should create 3 batches)
+		for i := 1; i <= 9; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have 3 batches of size 3
+		if len(batches) != 3 {
+			t.Fatalf("expected 3 batches, got %d", len(batches))
+		}
+
+		expected := [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
+		for i, batch := range batches {
+			if len(batch) != len(expected[i]) {
+				t.Errorf("batch %d: expected length %d, got %d", i, len(expected[i]), len(batch))
+			}
+			for j, v := range batch {
+				if v != expected[i][j] {
+					t.Errorf("batch %d, index %d: expected %d, got %d", i, j, expected[i][j], v)
+				}
+			}
+		}
+	})
+
+	t.Run("batches by timeout", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 10
+		timeout := 100 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		// Send a few values slowly
+		go func() {
+			in <- 1
+			in <- 2
+			time.Sleep(timeout + 50*time.Millisecond) // Wait for timeout
+			in <- 3
+			in <- 4
+			time.Sleep(timeout + 50*time.Millisecond) // Wait for timeout
+			close(in)
+		}()
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have 2 batches (triggered by timeout)
+		if len(batches) != 2 {
+			t.Fatalf("expected 2 batches, got %d", len(batches))
+		}
+
+		expected := [][]int{{1, 2}, {3, 4}}
+		for i, batch := range batches {
+			if len(batch) != len(expected[i]) {
+				t.Errorf("batch %d: expected length %d, got %d", i, len(expected[i]), len(batch))
+			}
+			for j, v := range batch {
+				if v != expected[i][j] {
+					t.Errorf("batch %d, index %d: expected %d, got %d", i, j, expected[i][j], v)
+				}
+			}
+		}
+	})
+
+	t.Run("partial batch on channel close", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 10)
+		batchSize := 5
+		timeout := 1 * time.Second
+
+		// Send 7 values (1 full batch + 2 remaining)
+		for i := 1; i <= 7; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have 2 batches
+		if len(batches) != 2 {
+			t.Fatalf("expected 2 batches, got %d", len(batches))
+		}
+
+		// First batch should be full
+		if len(batches[0]) != 5 {
+			t.Errorf("first batch: expected length 5, got %d", len(batches[0]))
+		}
+
+		// Second batch should be partial
+		if len(batches[1]) != 2 {
+			t.Errorf("second batch: expected length 2, got %d", len(batches[1]))
+		}
+
+		expected := [][]int{{1, 2, 3, 4, 5}, {6, 7}}
+		for i, batch := range batches {
+			for j, v := range batch {
+				if v != expected[i][j] {
+					t.Errorf("batch %d, index %d: expected %d, got %d", i, j, expected[i][j], v)
+				}
+			}
+		}
+	})
+
+	t.Run("context cancellation with partial batch", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		in := make(chan int)
+		batchSize := 10
+		timeout := 1 * time.Second
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		// Send a few values
+		go func() {
+			in <- 1
+			in <- 2
+			in <- 3
+			time.Sleep(50 * time.Millisecond)
+			cancel()
+		}()
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have received the partial batch on cancellation
+		if len(batches) != 1 {
+			t.Fatalf("expected 1 batch, got %d", len(batches))
+		}
+
+		if len(batches[0]) != 3 {
+			t.Errorf("expected batch length 3, got %d", len(batches[0]))
+		}
+
+		expected := []int{1, 2, 3}
+		for i, v := range batches[0] {
+			if v != expected[i] {
+				t.Errorf("index %d: expected %d, got %d", i, expected[i], v)
+			}
+		}
+	})
+
+	t.Run("timer starts on first value", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 10
+		timeout := 100 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		start := time.Now()
+
+		// Wait before sending first value
+		time.Sleep(50 * time.Millisecond)
+
+		go func() {
+			in <- 1
+			in <- 2
+			// Don't send more, let timeout trigger
+		}()
+
+		// Should receive batch after timeout from first value
+		batch := <-out
+
+		elapsed := time.Since(start)
+
+		// Should be approximately 50ms (wait) + 100ms (timeout) = 150ms
+		expectedMin := 140 * time.Millisecond
+		expectedMax := 180 * time.Millisecond
+
+		if elapsed < expectedMin || elapsed > expectedMax {
+			t.Errorf("expected elapsed time ~150ms, got %v", elapsed)
+		}
+
+		if len(batch) != 2 {
+			t.Errorf("expected batch length 2, got %d", len(batch))
+		}
+
+		close(in)
+	})
+
+	t.Run("multiple batches mixed size and timeout", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 3
+		timeout := 80 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		go func() {
+			// Batch 1: size-triggered
+			in <- 1
+			in <- 2
+			in <- 3
+
+			time.Sleep(20 * time.Millisecond)
+
+			// Batch 2: timeout-triggered
+			in <- 4
+			in <- 5
+			time.Sleep(timeout + 20*time.Millisecond)
+
+			// Batch 3: size-triggered
+			in <- 6
+			in <- 7
+			in <- 8
+
+			close(in)
+		}()
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		if len(batches) != 3 {
+			t.Fatalf("expected 3 batches, got %d", len(batches))
+		}
+
+		expected := [][]int{{1, 2, 3}, {4, 5}, {6, 7, 8}}
+		for i, batch := range batches {
+			if len(batch) != len(expected[i]) {
+				t.Errorf("batch %d: expected length %d, got %d", i, len(expected[i]), len(batch))
+			}
+			for j, v := range batch {
+				if v != expected[i][j] {
+					t.Errorf("batch %d, index %d: expected %d, got %d", i, j, expected[i][j], v)
+				}
+			}
+		}
+	})
+
+	t.Run("empty channel", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 5
+		timeout := 50 * time.Millisecond
+
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should receive no batches
+		if len(batches) != 0 {
+			t.Errorf("expected 0 batches, got %d", len(batches))
+		}
+	})
+
+	t.Run("with buffered output channel", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 20)
+		batchSize := 3
+		timeout := 1 * time.Second
+
+		// Send 9 values
+		for i := 1; i <= 9; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout, WithBuffer[[]int](5))
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		if len(batches) != 3 {
+			t.Fatalf("expected 3 batches, got %d", len(batches))
+		}
+	})
+
+	t.Run("single value with timeout", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 5
+		timeout := 80 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		go func() {
+			in <- 42
+			// Wait for timeout to trigger
+			time.Sleep(timeout + 50*time.Millisecond)
+			close(in)
+		}()
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		if len(batches) != 1 {
+			t.Fatalf("expected 1 batch, got %d", len(batches))
+		}
+
+		if len(batches[0]) != 1 {
+			t.Errorf("expected batch length 1, got %d", len(batches[0]))
+		}
+
+		if batches[0][0] != 42 {
+			t.Errorf("expected value 42, got %d", batches[0][0])
+		}
+	})
+
+	t.Run("rapid consecutive batches", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 50)
+		batchSize := 5
+		timeout := 1 * time.Second
+
+		// Send 25 values rapidly
+		for i := 1; i <= 25; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have 5 batches
+		if len(batches) != 5 {
+			t.Fatalf("expected 5 batches, got %d", len(batches))
+		}
+
+		// All batches should be full
+		for i, batch := range batches {
+			if len(batch) != batchSize {
+				t.Errorf("batch %d: expected length %d, got %d", i, batchSize, len(batch))
+			}
+		}
+	})
+
+	t.Run("context cancellation before first value", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		in := make(chan int)
+		batchSize := 5
+		timeout := 100 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		// Cancel immediately
+		cancel()
+
+		// Channel should close without any batches
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		if len(batches) != 0 {
+			t.Errorf("expected 0 batches, got %d", len(batches))
+		}
+	})
+
+	t.Run("batch size of 1", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int, 10)
+		batchSize := 1
+		timeout := 1 * time.Second
+
+		// Send 5 values
+		for i := 1; i <= 5; i++ {
+			in <- i
+		}
+		close(in)
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		var batches [][]int
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+
+		// Should have 5 batches of size 1
+		if len(batches) != 5 {
+			t.Fatalf("expected 5 batches, got %d", len(batches))
+		}
+
+		for i, batch := range batches {
+			if len(batch) != 1 {
+				t.Errorf("batch %d: expected length 1, got %d", i, len(batch))
+			}
+			if batch[0] != i+1 {
+				t.Errorf("batch %d: expected value %d, got %d", i, i+1, batch[0])
+			}
+		}
+	})
+
+	t.Run("timer resets after size-triggered batch", func(t *testing.T) {
+		ctx := context.Background()
+		in := make(chan int)
+		batchSize := 3
+		timeout := 100 * time.Millisecond
+
+		out := Batch(ctx, in, batchSize, timeout)
+
+		go func() {
+			// First batch: size-triggered
+			in <- 1
+			in <- 2
+			in <- 3
+
+			// Wait a bit, then start second batch
+			time.Sleep(50 * time.Millisecond)
+
+			// Second batch: timeout-triggered
+			in <- 4
+			in <- 5
+
+			// Should timeout after 100ms from first value (4), not from previous batch
+			time.Sleep(timeout + 50*time.Millisecond)
+			close(in)
+		}()
+
+		var batches [][]int
+		start := time.Now()
+		for batch := range out {
+			batches = append(batches, batch)
+		}
+		elapsed := time.Since(start)
+
+		if len(batches) != 2 {
+			t.Fatalf("expected 2 batches, got %d", len(batches))
+		}
+
+		// Total time should be less than 250ms (not 200ms from continuous timing)
+		// First batch immediate, wait 50ms, second batch after 100ms timeout
+		if elapsed > 300*time.Millisecond {
+			t.Errorf("timer may not have reset properly, elapsed: %v", elapsed)
+		}
+	})
+}

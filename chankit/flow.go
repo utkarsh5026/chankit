@@ -111,3 +111,67 @@ func FixedInterval[T any](ctx context.Context, in <-chan T, d time.Duration, opt
 
 	return outChan
 }
+
+func Batch[T any](ctx context.Context, in <-chan T, batchSize int, timeout time.Duration, opts ...ChanOption[[]T]) <-chan []T {
+	outChan := applyChanOptions(opts...)
+
+	go func() {
+		defer close(outChan)
+		var batch []T
+		var timer *time.Timer
+		var timerCh <-chan time.Time
+
+		sendBatch := func() {
+			if len(batch) > 0 {
+				outChan <- batch
+				batch = nil
+			}
+			if timer != nil {
+				timer.Stop()
+				timerCh = nil
+			}
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				sendBatch()
+				return
+
+			case val, ok := <-in:
+				if !ok {
+					sendBatch()
+					return
+				}
+
+				if len(batch) == 0 {
+					if timer == nil {
+						timer = time.NewTimer(timeout)
+					} else {
+						timer.Reset(timeout)
+					}
+					timerCh = timer.C
+				}
+
+				batch = append(batch, val)
+
+				if len(batch) >= batchSize {
+					select {
+					case outChan <- batch:
+						batch = nil
+						timer.Stop()
+						timerCh = nil
+					case <-ctx.Done():
+						sendBatch()
+						return
+					}
+				}
+
+			case <-timerCh:
+				sendBatch()
+			}
+		}
+	}()
+
+	return outChan
+}
