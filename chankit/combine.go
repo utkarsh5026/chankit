@@ -14,24 +14,20 @@ import (
 func Merge[T any](ctx context.Context, chans ...<-chan T) <-chan T {
 	outChan := make(chan T)
 
-	var wg sync.WaitGroup
-	for _, ch := range chans {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for val := range ch {
-				select {
-				case <-ctx.Done():
-					return
-				case outChan <- val:
-				}
-			}
-		}()
-	}
-
 	go func() {
-		wg.Wait()
-		close(outChan)
+		var wg sync.WaitGroup
+		defer func() {
+			wg.Wait()
+			close(outChan)
+		}()
+
+		for _, ch := range chans {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				forwardSimple(ctx, outChan, ch)
+			}()
+		}
 	}()
 
 	return outChan

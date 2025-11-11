@@ -14,13 +14,7 @@ func Map[T, R any](ctx context.Context, in <-chan T, mapFunc func(T) R, opts ...
 	outChan := applyChanOptions(opts...)
 	go func() {
 		defer close(outChan)
-		for val := range in {
-			select {
-			case <-ctx.Done():
-				return
-			case outChan <- mapFunc(val):
-			}
-		}
+		forwardWithTransform(ctx, outChan, in, mapFunc)
 	}()
 	return outChan
 }

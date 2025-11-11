@@ -83,3 +83,27 @@ func forwardWithSideEffect[T any](ctx context.Context, out chan<- T, in <-chan T
 		}
 	}
 }
+
+func forwardWithTransform[T, R any](ctx context.Context, out chan<- R, in <-chan T, transform func(T) R) {
+	for {
+		select {
+		case <-ctx.Done():
+			go drain(in)
+			return
+
+		case val, ok := <-in:
+			if !ok {
+				return
+			}
+
+			transformedVal := transform(val)
+
+			select {
+			case <-ctx.Done():
+				go drain(in)
+				return
+			case out <- transformedVal:
+			}
+		}
+	}
+}
