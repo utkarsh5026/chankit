@@ -10,7 +10,9 @@ func Merge[T any](ctx context.Context, chans ...<-chan T) <-chan T {
 
 	var wg sync.WaitGroup
 	for _, ch := range chans {
-		wg.Go(func() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			for val := range ch {
 				select {
 				case <-ctx.Done():
@@ -18,7 +20,7 @@ func Merge[T any](ctx context.Context, chans ...<-chan T) <-chan T {
 				case outChan <- val:
 				}
 			}
-		})
+		}()
 	}
 
 	go func() {
