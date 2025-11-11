@@ -79,7 +79,6 @@ func Skip[T any](ctx context.Context, in <-chan T, count int, opts ...ChanOption
 // This is useful for processing streams until a sentinel value or condition is met.
 // The output channel closes when predicate returns false, input closes, or context is cancelled.
 //
-//
 // Examples:
 //
 //	TakeWhile(ctx, ch, func(x int) bool { return x < 100 })        // take until value >= 100
