@@ -47,26 +47,14 @@ func Zip[T, R any](ctx context.Context, ch1 <-chan T, ch2 <-chan R) <-chan struc
 	go func() {
 		defer close(outChan)
 		for {
-			var val1 T
-			var val2 R
-			var ok1, ok2 bool
-
-			select {
-			case <-ctx.Done():
-				return
-			case val1, ok1 = <-ch1:
-				if !ok1 {
-					return
-				}
+			val1, ok1 := recieve(ctx, ch1)
+			if !ok1 {
+				return // First channel closed
 			}
 
-			select {
-			case <-ctx.Done():
-				return
-			case val2, ok2 = <-ch2:
-				if !ok2 {
-					return // Second channel closed
-				}
+			val2, ok2 := recieve(ctx, ch2)
+			if !ok2 {
+				return // Second channel closed
 			}
 
 			select {
@@ -121,10 +109,8 @@ func ZipN(ctx context.Context, channels ...any) <-chan []any {
 				}
 			}
 
-			select {
-			case <-ctx.Done():
+			if !send(ctx, outChan, result) {
 				return
-			case outChan <- result:
 			}
 		}
 	}()

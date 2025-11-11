@@ -11,27 +11,26 @@ import "context"
 //	Generate(ctx, genFunc)                      // unbuffered
 //	Generate(ctx, genFunc, WithBuffer[int](10)) // buffered with size 10
 func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...ChanOption[T]) <-chan T {
-	ch := applyChanOptions(opts...)
+	outChan := applyChanOptions(opts...)
 	go func() {
-		defer close(ch)
+		defer close(outChan)
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				if val, ok := genFunc(); ok {
-					select {
-					case <-ctx.Done():
-						return
-					case ch <- val:
-					}
-				} else {
+				val, ok := genFunc()
+				if !ok {
+					return
+				}
+
+				if !send(ctx, outChan, val) {
 					return
 				}
 			}
 		}
 	}()
-	return ch
+	return outChan
 }
 
 // Repeat creates a channel that infinitely repeats the given value.
@@ -42,20 +41,18 @@ func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...Chan
 //	Repeat(ctx, 42)                      // unbuffered, repeats 42 forever
 //	Repeat(ctx, "x", WithBuffer[string](5)) // buffered
 func Repeat[T any](ctx context.Context, value T, opts ...ChanOption[T]) <-chan T {
-	ch := applyChanOptions(opts...)
+	outChan := applyChanOptions(opts...)
 
 	go func() {
-		defer close(ch)
+		defer close(outChan)
 		for {
-			select {
-			case <-ctx.Done():
+			if !send(ctx, outChan, value) {
 				return
-			case ch <- value:
 			}
 		}
 	}()
 
-	return ch
+	return outChan
 }
 
 // Range creates a channel that produces values from start to end (exclusive) with the given step.
@@ -76,18 +73,17 @@ func Range[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32
 
 		if step > 0 {
 			for i := start; i < end; i += step {
-				select {
-				case <-ctx.Done():
+				if !send(ctx, ch, i) {
 					return
-				case ch <- i:
 				}
 			}
-		} else if step < 0 {
+			return
+		}
+
+		if step < 0 {
 			for i := start; i > end; i += step {
-				select {
-				case <-ctx.Done():
+				if !send(ctx, ch, i) {
 					return
-				case ch <- i:
 				}
 			}
 		}
