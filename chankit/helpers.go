@@ -67,36 +67,6 @@ func forwardSimple[T any](ctx context.Context, out chan<- T, in <-chan T) {
 	}
 }
 
-// forwardWithSideEffect forwards values from the input channel to the output channel
-// while executing a side effect function on each value before forwarding.
-// This is useful for operations like logging, metrics collection, or validation.
-//
-// The side effect function is called synchronously for each value received.
-// If the side effect panics, the panic will propagate and stop the forwarding.
-func forwardWithSideEffect[T any](ctx context.Context, out chan<- T, in <-chan T, sideEffect func(T)) {
-	for {
-		select {
-		case <-ctx.Done():
-			go drain(in)
-			return
-
-		case val, ok := <-in:
-			if !ok {
-				return
-			}
-
-			sideEffect(val)
-
-			select {
-			case <-ctx.Done():
-				go drain(in)
-				return
-			case out <- val:
-			}
-		}
-	}
-}
-
 // forwardWithTransform forwards values from the input channel to the output channel
 // after applying a transformation function to each value. This allows changing
 // the type or content of values as they flow through the channel.
@@ -131,6 +101,18 @@ func forwardWithTransform[T, R any](ctx context.Context, out chan<- R, in <-chan
 	}
 }
 
+// recieve reads a value from the input channel with context cancellation support.
+// It returns the received value and a boolean indicating success.
+//
+// Parameters:
+//   - ctx: Context for cancellation control
+//   - in: Input channel to receive from
+//
+// Returns:
+//   - T: The received value, or zero value if context is cancelled or channel is closed
+//   - bool: true if value was successfully received, false if context was cancelled or channel is closed
+//
+// The function respects context cancellation and will immediately return if the context is done.
 func recieve[T any](ctx context.Context, in <-chan T) (T, bool) {
 	select {
 	case <-ctx.Done():
@@ -142,6 +124,19 @@ func recieve[T any](ctx context.Context, in <-chan T) (T, bool) {
 	}
 }
 
+// send writes a value to the output channel with context cancellation support.
+// It returns a boolean indicating whether the send was successful.
+//
+// Parameters:
+//   - ctx: Context for cancellation control
+//   - out: Output channel to send to
+//   - val: Value to send
+//
+// Returns:
+//   - bool: true if value was successfully sent, false if context was cancelled
+//
+// The function respects context cancellation and will immediately return false if the context is done,
+// preventing blocking sends when the operation should be cancelled.
 func send[T any](ctx context.Context, out chan<- T, val T) bool {
 	select {
 	case <-ctx.Done():
