@@ -32,19 +32,14 @@ func Filter[T any](ctx context.Context, in <-chan T, filterFunc func(T) bool, op
 
 	go func() {
 		defer close(outChan)
-		for val := range in {
-			select {
-			case <-ctx.Done():
+		for {
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
-			default:
-				ok := filterFunc(val)
-				if ok {
-					select {
-					case <-ctx.Done():
-						return
-					case outChan <- val:
-					}
-				}
+			}
+
+			if filterFunc(val) && !send(ctx, outChan, val) {
+				return
 			}
 		}
 	}()
@@ -62,14 +57,10 @@ func Filter[T any](ctx context.Context, in <-chan T, filterFunc func(T) bool, op
 func Reduce[T, R any](ctx context.Context, in <-chan T, reduceFunc func(R, T) R, initial R) R {
 	accumulator := initial
 	for {
-		select {
-		case <-ctx.Done():
+		val, ok := recieve(ctx, in)
+		if !ok {
 			return accumulator
-		case val, ok := <-in:
-			if !ok {
-				return accumulator
-			}
-			accumulator = reduceFunc(accumulator, val)
 		}
+		accumulator = reduceFunc(accumulator, val)
 	}
 }

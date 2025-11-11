@@ -130,3 +130,24 @@ func forwardWithTransform[T, R any](ctx context.Context, out chan<- R, in <-chan
 		}
 	}
 }
+
+func recieve[T any](ctx context.Context, in <-chan T) (T, bool) {
+	select {
+	case <-ctx.Done():
+		var zero T
+		return zero, false
+
+	case val, ok := <-in:
+		return val, ok
+	}
+}
+
+func send[T any](ctx context.Context, out chan<- T, val T) bool {
+	select {
+	case <-ctx.Done():
+		return false
+
+	case out <- val:
+		return true
+	}
+}
