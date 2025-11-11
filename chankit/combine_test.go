@@ -915,3 +915,258 @@ func TestZip(t *testing.T) {
 		}
 	})
 }
+
+// TestZipN tests the ZipN function
+func TestZipN(t *testing.T) {
+	t.Run("zips three channels", func(t *testing.T) {
+		ctx := context.Background()
+		ch1 := make(chan int, 3)
+		ch2 := make(chan string, 3)
+		ch3 := make(chan bool, 3)
+
+		ch1 <- 1
+		ch1 <- 2
+		ch1 <- 3
+		close(ch1)
+
+		ch2 <- "a"
+		ch2 <- "b"
+		ch2 <- "c"
+		close(ch2)
+
+		ch3 <- true
+		ch3 <- false
+		ch3 <- true
+		close(ch3)
+
+		out := ZipN(ctx, ch1, ch2, ch3)
+
+		var results [][]any
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive 3 tuples
+		if len(results) != 3 {
+			t.Fatalf("expected 3 tuples, got %d", len(results))
+		}
+
+		// Verify first tuple
+		if results[0][0] != 1 || results[0][1] != "a" || results[0][2] != true {
+			t.Errorf("tuple 0: expected [1, a, true], got %v", results[0])
+		}
+
+		// Verify second tuple
+		if results[1][0] != 2 || results[1][1] != "b" || results[1][2] != false {
+			t.Errorf("tuple 1: expected [2, b, false], got %v", results[1])
+		}
+
+		// Verify third tuple
+		if results[2][0] != 3 || results[2][1] != "c" || results[2][2] != true {
+			t.Errorf("tuple 2: expected [3, c, true], got %v", results[2])
+		}
+	})
+
+	t.Run("stops when any channel closes", func(t *testing.T) {
+		ctx := context.Background()
+		ch1 := make(chan int, 2)
+		ch2 := make(chan string, 5)
+		ch3 := make(chan bool, 5)
+
+		ch1 <- 1
+		ch1 <- 2
+		close(ch1) // This closes first
+
+		for i := 'a'; i <= 'e'; i++ {
+			ch2 <- string(i)
+		}
+		close(ch2)
+
+		for i := 0; i < 5; i++ {
+			ch3 <- true
+		}
+		close(ch3)
+
+		out := ZipN(ctx, ch1, ch2, ch3)
+
+		var results [][]any
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should only receive 2 tuples (limited by ch1)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 tuples, got %d", len(results))
+		}
+	})
+
+	t.Run("handles empty channels", func(t *testing.T) {
+		ctx := context.Background()
+		ch1 := make(chan int)
+		ch2 := make(chan string)
+
+		close(ch1)
+		close(ch2)
+
+		out := ZipN(ctx, ch1, ch2)
+
+		var results [][]any
+		for val := range out {
+			results = append(results, val)
+		}
+
+		if len(results) != 0 {
+			t.Errorf("expected 0 tuples, got %d", len(results))
+		}
+	})
+
+	t.Run("handles no channels", func(t *testing.T) {
+		ctx := context.Background()
+
+		out := ZipN(ctx)
+
+		// Channel should close immediately
+		timeout := time.After(100 * time.Millisecond)
+		select {
+		case _, ok := <-out:
+			if ok {
+				t.Fatal("expected channel to be closed")
+			}
+		case <-timeout:
+			t.Fatal("channel did not close")
+		}
+	})
+
+	t.Run("context cancellation stops zipN", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		ch1 := make(chan int)
+		ch2 := make(chan string)
+		ch3 := make(chan bool)
+
+		go func() {
+			for i := 1; i <= 100; i++ {
+				select {
+				case ch1 <- i:
+				case <-time.After(1 * time.Second):
+					return
+				}
+			}
+		}()
+
+		go func() {
+			for i := 'a'; i <= 'z'; i++ {
+				select {
+				case ch2 <- string(i):
+				case <-time.After(1 * time.Second):
+					return
+				}
+			}
+		}()
+
+		go func() {
+			for {
+				select {
+				case ch3 <- true:
+				case <-time.After(1 * time.Second):
+					return
+				}
+			}
+		}()
+
+		out := ZipN(ctx, ch1, ch2, ch3)
+
+		// Collect a few tuples then cancel
+		count := 0
+		for range out {
+			count++
+			if count == 5 {
+				cancel()
+			}
+		}
+
+		// Should have stopped after cancellation
+		if count > 10 {
+			t.Errorf("expected ~5-7 tuples after cancellation, got %d", count)
+		}
+	})
+
+	t.Run("zips many channels", func(t *testing.T) {
+		ctx := context.Background()
+
+		numChans := 5
+		channels := make([]any, numChans)
+
+		for i := 0; i < numChans; i++ {
+			ch := make(chan int, 3)
+			ch <- i * 10
+			ch <- i*10 + 1
+			ch <- i*10 + 2
+			close(ch)
+			channels[i] = ch
+		}
+
+		out := ZipN(ctx, channels...)
+
+		var results [][]any
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive 3 tuples
+		if len(results) != 3 {
+			t.Fatalf("expected 3 tuples, got %d", len(results))
+		}
+
+		// Verify first tuple: [0, 10, 20, 30, 40]
+		for i := 0; i < numChans; i++ {
+			if results[0][i] != i*10 {
+				t.Errorf("tuple 0 position %d: expected %d, got %v", i, i*10, results[0][i])
+			}
+		}
+
+		// Verify second tuple: [1, 11, 21, 31, 41]
+		for i := 0; i < numChans; i++ {
+			if results[1][i] != i*10+1 {
+				t.Errorf("tuple 1 position %d: expected %d, got %v", i, i*10+1, results[1][i])
+			}
+		}
+
+		// Verify third tuple: [2, 12, 22, 32, 42]
+		for i := 0; i < numChans; i++ {
+			if results[2][i] != i*10+2 {
+				t.Errorf("tuple 2 position %d: expected %d, got %v", i, i*10+2, results[2][i])
+			}
+		}
+	})
+
+	t.Run("single channel", func(t *testing.T) {
+		ctx := context.Background()
+		ch := make(chan int, 3)
+
+		ch <- 1
+		ch <- 2
+		ch <- 3
+		close(ch)
+
+		out := ZipN(ctx, ch)
+
+		var results [][]any
+		for val := range out {
+			results = append(results, val)
+		}
+
+		// Should receive 3 single-element tuples
+		if len(results) != 3 {
+			t.Fatalf("expected 3 tuples, got %d", len(results))
+		}
+
+		for i := 0; i < 3; i++ {
+			if len(results[i]) != 1 {
+				t.Errorf("tuple %d: expected length 1, got %d", i, len(results[i]))
+			}
+			if results[i][0] != i+1 {
+				t.Errorf("tuple %d: expected [%d], got %v", i, i+1, results[i])
+			}
+		}
+	})
+}
