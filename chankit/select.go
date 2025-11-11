@@ -23,22 +23,15 @@ func Take[T any](ctx context.Context, in <-chan T, count int, opts ...ChanOption
 				return
 			}
 
-			select {
-			case <-ctx.Done():
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
-
-			case val, ok := <-in:
-				if !ok {
-					return
-				}
-
-				select {
-				case <-ctx.Done():
-					return
-				case outChan <- val:
-					taken++
-				}
 			}
+
+			if !send(ctx, outChan, val) {
+				return
+			}
+			taken++
 		}
 	}()
 
@@ -62,25 +55,18 @@ func Skip[T any](ctx context.Context, in <-chan T, count int, opts ...ChanOption
 		skipped := 0
 
 		for {
-			select {
-			case <-ctx.Done():
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
+			}
 
-			case val, ok := <-in:
-				if !ok {
-					return
-				}
+			if skipped < count {
+				skipped++
+				continue
+			}
 
-				if skipped < count {
-					skipped++
-					continue
-				}
-
-				select {
-				case <-ctx.Done():
-					return
-				case outChan <- val:
-				}
+			if !send(ctx, outChan, val) {
+				return
 			}
 		}
 	}()
@@ -104,29 +90,20 @@ func TakeWhile[T any](ctx context.Context, in <-chan T, predicate func(T) bool, 
 
 	go func() {
 		defer close(outChan)
-
 		for {
-			select {
-			case <-ctx.Done():
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
+			}
 
-			case val, ok := <-in:
-				if !ok {
-					return
-				}
+			if !predicate(val) {
+				return
+			}
 
-				if !predicate(val) {
-					return
-				}
-
-				select {
-				case <-ctx.Done():
-					return
-				case outChan <- val:
-				}
+			if !send(ctx, outChan, val) {
+				return
 			}
 		}
-
 	}()
 
 	return outChan
@@ -150,27 +127,20 @@ func SkipWhile[T any](ctx context.Context, in <-chan T, predicate func(T) bool, 
 		skipping := true
 
 		for {
-			select {
-			case <-ctx.Done():
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
+			}
 
-			case val, ok := <-in:
-				if !ok {
-					return
+			if skipping {
+				if predicate(val) {
+					continue
 				}
+				skipping = false
+			}
 
-				if skipping {
-					if predicate(val) {
-						continue
-					}
-					skipping = false
-				}
-
-				select {
-				case <-ctx.Done():
-					return
-				case outChan <- val:
-				}
+			if !send(ctx, outChan, val) {
+				return
 			}
 		}
 	}()
