@@ -40,7 +40,7 @@ func drain[T any](in <-chan T) {
 	}
 }
 
-func sendTo[T any](ctx context.Context, out chan<- T, in <-chan T) {
+func forwardSimple[T any](ctx context.Context, out chan<- T, in <-chan T) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -50,6 +50,30 @@ func sendTo[T any](ctx context.Context, out chan<- T, in <-chan T) {
 			if !ok {
 				return
 			}
+			select {
+			case <-ctx.Done():
+				go drain(in)
+				return
+			case out <- val:
+			}
+		}
+	}
+}
+
+func forwardWithSideEffect[T any](ctx context.Context, out chan<- T, in <-chan T, sideEffect func(T)) {
+	for {
+		select {
+		case <-ctx.Done():
+			go drain(in)
+			return
+
+		case val, ok := <-in:
+			if !ok {
+				return
+			}
+
+			sideEffect(val)
+
 			select {
 			case <-ctx.Done():
 				go drain(in)
