@@ -13,7 +13,18 @@ func Tap[T any](ctx context.Context, in <-chan T, tapFunc func(T), opts ...ChanO
 
 	go func() {
 		defer close(outChan)
-		forwardWithSideEffect(ctx, outChan, in, tapFunc)
+		for {
+			val, ok := recieve(ctx, in)
+			if !ok {
+				return
+			}
+
+			tapFunc(val)
+
+			if !send(ctx, outChan, val) {
+				return
+			}
+		}
 	}()
 
 	return outChan
@@ -31,23 +42,17 @@ func FlatMap[T, R any](ctx context.Context, in <-chan T, flatMapFunc func(T) <-c
 		}()
 
 		for {
-			select {
-			case <-ctx.Done():
-				go drain(in)
+			val, ok := recieve(ctx, in)
+			if !ok {
 				return
-
-			case val, ok := <-in:
-				if !ok {
-					return
-				}
-
-				innerChan := flatMapFunc(val)
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					forwardSimple(ctx, outChan, innerChan)
-				}()
 			}
+
+			innerChan := flatMapFunc(val)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				forwardSimple(ctx, outChan, innerChan)
+			}()
 		}
 	}()
 
