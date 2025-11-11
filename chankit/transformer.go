@@ -14,7 +14,17 @@ func Map[T, R any](ctx context.Context, in <-chan T, mapFunc func(T) R, opts ...
 	outChan := applyChanOptions(opts...)
 	go func() {
 		defer close(outChan)
-		forwardWithTransform(ctx, outChan, in, mapFunc)
+		for {
+			val, ok := recieve(ctx, in)
+			if !ok {
+				return
+			}
+
+			if !send(ctx, outChan, mapFunc(val)) {
+				return
+			}
+		}
+
 	}()
 	return outChan
 }
