@@ -34,12 +34,19 @@ func WithBufferAuto[T any]() ChanOption[T] {
 	}
 }
 
+// drain consumes all remaining values from a channel without processing them.
+// This is used to prevent goroutine leaks when context is cancelled but the
+// input channel still has pending values. By draining in a separate goroutine,
+// we allow the producer to complete without blocking.
 func drain[T any](in <-chan T) {
 	for range in {
 		// just drain
 	}
 }
 
+// forwardSimple forwards values from the input channel to the output channel
+// with context cancellation support. It performs a simple pass-through operation
+// without any transformation or side effects.
 func forwardSimple[T any](ctx context.Context, out chan<- T, in <-chan T) {
 	for {
 		select {
@@ -60,6 +67,12 @@ func forwardSimple[T any](ctx context.Context, out chan<- T, in <-chan T) {
 	}
 }
 
+// forwardWithSideEffect forwards values from the input channel to the output channel
+// while executing a side effect function on each value before forwarding.
+// This is useful for operations like logging, metrics collection, or validation.
+//
+// The side effect function is called synchronously for each value received.
+// If the side effect panics, the panic will propagate and stop the forwarding.
 func forwardWithSideEffect[T any](ctx context.Context, out chan<- T, in <-chan T, sideEffect func(T)) {
 	for {
 		select {
@@ -84,6 +97,16 @@ func forwardWithSideEffect[T any](ctx context.Context, out chan<- T, in <-chan T
 	}
 }
 
+// forwardWithTransform forwards values from the input channel to the output channel
+// after applying a transformation function to each value. This allows changing
+// the type or content of values as they flow through the channel.
+//
+// The transform function is called synchronously for each value received.
+// If the transform function panics, the panic will propagate and stop the forwarding.
+//
+// The function respects context cancellation at two points:
+// 1. Before receiving from the input channel
+// 2. Before sending to the output channel (after transformation)
 func forwardWithTransform[T, R any](ctx context.Context, out chan<- R, in <-chan T, transform func(T) R) {
 	for {
 		select {
