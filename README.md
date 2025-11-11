@@ -20,6 +20,8 @@ go get github.com/utkarsh5026/chankit
 
 ## Quick Start
 
+### Traditional Approach (Function Chaining)
+
 ```go
 import (
     "context"
@@ -50,7 +52,200 @@ func main() {
 }
 ```
 
+### Modern Pipeline Approach (NEW! ⭐)
+
+```go
+import (
+    "context"
+    "fmt"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Same logic, much cleaner syntax with Pipeline API
+    result := chankit.RangePipeline(ctx, 1, 10, 1).
+        Map(func(x int) any { return x * 2 }).
+        Filter(func(x any) bool { return x.(int)%4 == 0 }).
+        ToSlice()
+
+    fmt.Println(result) // [4, 8, 12, 16]
+}
+```
+
 ## API Reference
+
+### 🚀 Pipeline API (Fluent Interface)
+
+The Pipeline API provides a modern, chainable interface for channel operations, making your code more readable and maintainable.
+
+#### Creating Pipelines
+
+```go
+// From a range of numbers
+pipeline := chankit.RangePipeline(ctx, 1, 100, 1)
+
+// From an existing slice
+pipeline := chankit.FromSlice(ctx, []int{1, 2, 3, 4, 5})
+
+// From an existing channel
+pipeline := chankit.From(ctx, myChan)
+
+// Generate values
+pipeline := chankit.NewPipeline[int](ctx).Generate(func() (int, bool) {
+    return getValue(), hasMore()
+})
+
+// Repeat a value
+pipeline := chankit.NewPipeline[string](ctx).Repeat("ping").Take(10)
+```
+
+#### Transformation Methods
+
+```go
+// Map: Transform each value
+pipeline.Map(func(x int) any { return x * 2 })
+
+// MapTo: Type-safe transformation (recommended)
+chankit.MapTo(pipeline, func(x int) string { return fmt.Sprint(x) })
+
+// Filter: Keep only matching values
+pipeline.Filter(func(x int) bool { return x > 10 })
+
+// Where: Alias for Filter (LINQ-style)
+pipeline.Where(func(x int) bool { return x%2 == 0 })
+
+// Select: Alias for Map (LINQ-style)
+pipeline.Select(func(x int) any { return x * 2 })
+
+// FlatMap: Transform and flatten
+pipeline.FlatMap(func(x int) <-chan int {
+    ch := make(chan int, 2)
+    go func() {
+        defer close(ch)
+        ch <- x
+        ch <- x * 10
+    }()
+    return ch
+})
+```
+
+#### Selection Methods
+
+```go
+// Take: Get first N values
+pipeline.Take(10)
+
+// Skip: Skip first N values
+pipeline.Skip(5)
+
+// TakeWhile: Take while predicate is true
+pipeline.TakeWhile(func(x int) bool { return x < 100 })
+
+// SkipWhile: Skip while predicate is true
+pipeline.SkipWhile(func(x int) bool { return x < 0 })
+
+// First: Get first value
+value, ok := pipeline.First()
+
+// Last: Get last value
+value, ok := pipeline.Last()
+```
+
+#### Flow Control Methods
+
+```go
+// Throttle: Rate limit (drops values)
+pipeline.Throttle(100 * time.Millisecond)
+
+// Debounce: Wait for silence
+pipeline.Debounce(300 * time.Millisecond)
+
+// FixedInterval: Pace values (preserves all)
+pipeline.FixedInterval(100 * time.Millisecond)
+
+// Batch: Group into batches
+batches := pipeline.Batch(10, 1*time.Second)
+for batch := range batches {
+    fmt.Printf("Got %d items\n", len(batch))
+}
+```
+
+#### Side Effects & Observation
+
+```go
+// Tap: Observe values without modifying
+pipeline.Tap(func(x int) {
+    fmt.Printf("Processing: %d\n", x)
+})
+
+// ForEach: Execute for each value (terminal)
+pipeline.ForEach(func(x int) {
+    fmt.Println(x)
+})
+```
+
+#### Combining Pipelines
+
+```go
+// Merge: Combine multiple channels
+ch1 := chankit.RangePipeline(ctx, 1, 5, 1)
+ch2 := chankit.RangePipeline(ctx, 10, 15, 1)
+merged := ch1.Merge(ch2.Chan())
+
+// ZipWith: Pair values from two channels
+numbers := chankit.RangePipeline(ctx, 1, 5, 1)
+letters := chankit.FromSlice(ctx, []string{"a", "b", "c", "d"})
+pairs := chankit.ZipWith(numbers, letters.Chan())
+```
+
+#### Terminal Operations
+
+```go
+// ToSlice: Collect all values
+result := pipeline.ToSlice()
+
+// Reduce: Aggregate values
+sum := pipeline.Reduce(func(acc, x int) int { return acc + x }, 0)
+
+// ReduceTo: Reduce with type change
+str := chankit.ReduceTo(pipeline, func(acc string, x int) string {
+    return acc + fmt.Sprint(x)
+}, "")
+
+// Count: Count values
+count := pipeline.Count()
+
+// Any: Check if any value matches
+hasEven := pipeline.Any(func(x int) bool { return x%2 == 0 })
+
+// All: Check if all values match
+allPositive := pipeline.All(func(x int) bool { return x > 0 })
+
+// Chan: Get underlying channel
+ch := pipeline.Chan()
+for val := range ch {
+    // process val
+}
+```
+
+#### Complete Pipeline Example
+
+```go
+ctx := context.Background()
+
+// Complex data processing pipeline
+result := chankit.RangePipeline(ctx, 1, 1000, 1).
+    Filter(func(x int) bool { return x%2 == 0 }).    // Even numbers only
+    Map(func(x int) any { return x * x }).           // Square them
+    Tap(func(x any) { log.Printf("Value: %v", x) }). // Log each value
+    Skip(10).                                         // Skip first 10
+    Take(20).                                         // Take next 20
+    ToSlice()                                         // Collect results
+
+fmt.Printf("Processed %d values\n", len(result))
+```
 
 ### Flow Control
 
@@ -287,12 +482,12 @@ slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](1000))
 
 ### Pipeline Pattern
 
-Chain operations for elegant data processing:
+#### Traditional Function Chaining vs. Modern Pipeline API
 
 ```go
 ctx := context.Background()
 
-// Generate -> Transform -> Filter -> Collect
+// ❌ Old way: Deeply nested, hard to read
 result := chankit.ChanToSlice(ctx,
     chankit.Filter(ctx,
         chankit.Map(ctx,
@@ -302,6 +497,12 @@ result := chankit.ChanToSlice(ctx,
         func(x int) bool { return x%2 == 0 },
     ),
 )
+
+// ✅ New way: Clean, readable, maintainable
+result := chankit.RangePipeline(ctx, 1, 100, 1).
+    Map(func(x int) any { return x * x }).
+    Filter(func(x any) bool { return x.(int)%2 == 0 }).
+    ToSlice()
 ```
 
 ### Debounced Search
@@ -309,14 +510,20 @@ result := chankit.ChanToSlice(ctx,
 Implement efficient search-as-you-type:
 
 ```go
+// Traditional approach
 func handleSearch(ctx context.Context, userInput <-chan string) <-chan []Result {
-    // Debounce user input (wait 300ms after typing stops)
     debounced := chankit.Debounce(ctx, userInput, 300*time.Millisecond)
-
-    // Map to search results
     return chankit.Map(ctx, debounced, func(query string) []Result {
         return performSearch(query)
     })
+}
+
+// Pipeline approach
+func handleSearchPipeline(ctx context.Context, userInput <-chan string) <-chan any {
+    return chankit.From(ctx, userInput).
+        Debounce(300*time.Millisecond).
+        Map(func(query string) any { return performSearch(query) }).
+        Chan()
 }
 ```
 
