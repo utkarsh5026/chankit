@@ -7,8 +7,9 @@ import "context"
 // By default, uses an unbuffered channel. Use WithBuffer() to add buffering.
 //
 // Examples:
-//   Generate(ctx, genFunc)                      // unbuffered
-//   Generate(ctx, genFunc, WithBuffer[int](10)) // buffered with size 10
+//
+//	Generate(ctx, genFunc)                      // unbuffered
+//	Generate(ctx, genFunc, WithBuffer[int](10)) // buffered with size 10
 func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...ChanOption[T]) <-chan T {
 	ch := applyChanOptions(opts...)
 	go func() {
@@ -37,8 +38,9 @@ func Generate[T any](ctx context.Context, genFunc func() (T, bool), opts ...Chan
 // The channel will close when the context is cancelled.
 //
 // Examples:
-//   Repeat(ctx, 42)                      // unbuffered, repeats 42 forever
-//   Repeat(ctx, "x", WithBuffer[string](5)) // buffered
+//
+//	Repeat(ctx, 42)                      // unbuffered, repeats 42 forever
+//	Repeat(ctx, "x", WithBuffer[string](5)) // buffered
 func Repeat[T any](ctx context.Context, value T, opts ...ChanOption[T]) <-chan T {
 	ch := applyChanOptions(opts...)
 
@@ -61,10 +63,11 @@ func Repeat[T any](ctx context.Context, value T, opts ...ChanOption[T]) <-chan T
 // For negative steps: generates [start, start+step, start+2*step, ...) while i > end
 //
 // Examples:
-//   Range(ctx, 0, 10, 1)           // 0, 1, 2, ..., 9
-//   Range(ctx, 10, 0, -1)          // 10, 9, 8, ..., 1
-//   Range(ctx, 0, 5, 2)            // 0, 2, 4
-//   Range(ctx, 0, 10, 1, WithBuffer[int](5))  // buffered
+//
+//	Range(ctx, 0, 10, 1)           // 0, 1, 2, ..., 9
+//	Range(ctx, 10, 0, -1)          // 10, 9, 8, ..., 1
+//	Range(ctx, 0, 5, 2)            // 0, 2, 4
+//	Range(ctx, 0, 10, 1, WithBuffer[int](5))  // buffered
 func Range[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64](ctx context.Context, start, end, step T, opts ...ChanOption[T]) <-chan T {
 	ch := applyChanOptions(opts...)
 

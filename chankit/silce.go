@@ -6,9 +6,10 @@ import "context"
 // By default, uses an unbuffered channel. Use WithBuffer() or WithBufferAuto() to change behavior.
 //
 // Examples:
-//   SliceToChan(ctx, slice)                           // unbuffered
-//   SliceToChan(ctx, slice, WithBuffer[int](10))      // buffered with size 10
-//   SliceToChan(ctx, slice, WithBufferAuto[int]())    // buffered to slice length
+//
+//	SliceToChan(ctx, slice)                           // unbuffered
+//	SliceToChan(ctx, slice, WithBuffer[int](10))      // buffered with size 10
+//	SliceToChan(ctx, slice, WithBufferAuto[int]())    // buffered to slice length
 func SliceToChan[T any](ctx context.Context, slice []T, opts ...ChanOption[T]) <-chan T {
 	cfg := &chanConfig[T]{bufferSize: 0}
 	for _, opt := range opts {
@@ -54,8 +55,9 @@ func WithCapacity[T any](capacity int) SliceOption[T] {
 // By default, creates a slice with zero initial capacity. Use WithCapacity() for better performance.
 //
 // Examples:
-//   ChanToSlice(ctx, ch)                          // default capacity
-//   ChanToSlice(ctx, ch, WithCapacity[int](100))  // pre-allocated capacity
+//
+//	ChanToSlice(ctx, ch)                          // default capacity
+//	ChanToSlice(ctx, ch, WithCapacity[int](100))  // pre-allocated capacity
 func ChanToSlice[T any](ctx context.Context, ch <-chan T, opts ...SliceOption[T]) []T {
 	cfg := &sliceConfig[T]{initialCapacity: 0}
 
