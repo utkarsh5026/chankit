@@ -71,6 +71,9 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
+    - name: Generate go.list
+      run: go list -json -deps ./... > go.list
+
     - name: Run Nancy (OSS Index)
       uses: sonatype-nexus-community/nancy-github-action@main
       with:
