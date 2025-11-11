@@ -1,0 +1,24 @@
+# Configuration for automatic PR labeling based on file paths
+
+'area: documentation':
+  - '**/*.md'
+  - 'docs/**/*'
+
+'area: tests':
+  - '**/*_test.go'
+  - 'chankit/*_test.go'
+
+'area: ci/cd':
+  - '.github/**/*'
+  - '.golangci.yml'
+
+'area: core':
+  - 'chankit/*.go'
+  - '!chankit/*_test.go'
+
+'area: examples':
+  - 'examples/**/*'
+
+'dependencies':
+  - 'go.mod'
+  - 'go.sum'
