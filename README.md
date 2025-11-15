@@ -1,134 +1,132 @@
-# chankit
+<div align="center">
 
-A comprehensive Go toolkit for elegant and powerful channel operations. Built with generics for type safety and composability.
+# 🔗 chankit
 
-<!-- Examples Section -->
+### A comprehensive Go toolkit for elegant and powerful channel operations
 
-<div align="center" style="margin-bottom: 2em;">
-  <h3 style="
-    font-size:2rem;
-    margin:0.8em 0 0.3em 0;
-    letter-spacing:0.01em;
-    color:#334085;"
-  >✨ Example 1: Data Processing Pipeline</h3>
-  <p style="
-    font-size:1.08rem;
-    color:#556;"
-  >
-    <b>Goal:</b> Take numbers <b>1–100</b>, square them, keep only the <b>even</b> results, and collect all outputs.
-  </p>
-  <img
-    src="./images/process-numbers.png"
-    alt="Data Processing Pipeline"
-    style="
-      max-width: 94%; min-width:220px;
-      border-radius: 14px; display:block;
-      margin: 1em auto 1.8em auto;
-      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
-      border: 1.5px solid #e6e6fa;"
-  />
+Built with generics for type safety and composability
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/utkarsh5026/chankit)](https://goreportcard.com/report/github.com/utkarsh5026/chankit)
+[![GoDoc](https://godoc.org/github.com/utkarsh5026/chankit?status.svg)](https://godoc.org/github.com/utkarsh5026/chankit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 </div>
 
 ---
 
-<div align="center" style="margin-bottom: 2em;">
-  <h3 style="
-    font-size:2rem;
-    margin:0.8em 0 0.3em 0;
-    letter-spacing:0.01em;
-    color:#334085;"
-  >✨ Example 2: Event Stream Processing</h3>
-  <p style="
-    font-size:1.08rem;
-    color:#556;"
-  >
-    <b>Goal:</b> Process event stream &mdash; skip first <b>10</b>, take next <b>20</b>, throttle, then count.
-  </p>
-  <img
-    src="./images/event-processing.png"
-    alt="Event Stream Processing"
-    style="
-      max-width: 94%; min-width:220px;
-      border-radius: 14px; display:block;
-      margin: 1em auto 1.8em auto;
-      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
-      border: 1.5px solid #e6e6fa;"
-  />
-</div>
+## 📖 Table of Contents
+
+- [Examples](#-examples)
+- [Features](#-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+- [Patterns and Examples](#-patterns-and-examples)
 
 ---
 
-<div align="center" style="margin-bottom: 2em;">
-  <h3 style="
-    font-size:2rem;
-    margin:0.8em 0 0.3em 0;
-    letter-spacing:0.01em;
-    color:#334085;"
-  >✨ Example 3: Data Transformation Stream</h3>
-  <p style="
-    font-size:1.08rem;
-    color:#556;"
-  >
-    <b>Goal:</b> Transform user data &mdash; filter <b>active users</b>, extract <b>emails</b>, batch and process.
-  </p>
-  <img
-    src="./images/data-transform.png"
-    alt="Data Transformation Stream"
-    style="
-      max-width: 94%; min-width:220px;
-      border-radius: 14px; display:block;
-      margin: 1em auto 1.8em auto;
-      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
-      border: 1.5px solid #e6e6fa;"
-  />
-</div>
+## ✨ Examples
+
+<div align="center">
+
+### 📊 Example 1: Data Processing Pipeline
+
+**Goal:** Take numbers 1–100, square them, keep only the even results, and collect all outputs.
+
+<img src="./images/process-numbers.png" alt="Data Processing Pipeline" width="800"/>
+
+<br/><br/>
 
 ---
 
-<div align="center" style="margin-bottom: 2em;">
-  <h3 style="
-    font-size:2rem;
-    margin:0.8em 0 0.3em 0;
-    letter-spacing:0.01em;
-    color:#334085;"
-  >✨ Example 4: Real-time Data Analytics</h3>
-  <p style="
-    font-size:1.08rem;
-    color:#556;"
-  >
-    <b>Goal:</b> Process sensor data &mdash; <b>debounce</b> readings, <b>transform</b>, reduce to <b>average</b>.
-  </p>
-  <img
-    src="./images/data-analytics.png"
-    alt="Real-time Data Analytics"
-    style="
-      max-width: 94%; min-width:220px;
-      border-radius: 14px; display:block;
-      margin: 1em auto 1.8em auto;
-      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
-      border: 1.5px solid #e6e6fa;"
-  />
+### 🔄 Example 2: Event Stream Processing
+
+**Goal:** Process event stream — skip first 10, take next 20, throttle, then count.
+
+<img src="./images/event-processing.png" alt="Event Stream Processing" width="800"/>
+
+<br/><br/>
+
+---
+
+### 🔀 Example 3: Data Transformation Stream
+
+**Goal:** Transform user data — filter active users, extract emails, batch and process.
+
+<img src="./images/data-transform.png" alt="Data Transformation Stream" width="800"/>
+
+<br/><br/>
+
+---
+
+### 📈 Example 4: Real-time Data Analytics
+
+**Goal:** Process sensor data — debounce readings, transform, reduce to average.
+
+<img src="./images/data-analytics.png" alt="Real-time Data Analytics" width="800"/>
+
 </div>
 
-## Features
+<br/>
 
-- **Flow Control**: Throttle, debounce, batch, and fixed-interval processing
-- **Transformations**: Map, filter, and reduce operations on channels
-- **Generators**: Create channels from functions, ranges, and repeated values
-- **Conversions**: Seamless slice-to-channel and channel-to-slice conversions
-- **Context-Aware**: All operations respect context cancellation
-- **Type-Safe**: Full generic support for compile-time type safety
-- **Production-Ready**: Comprehensive test coverage
+## 🚀 Features
 
-## Installation
+<table>
+<tr>
+<td width="50%">
+
+### 🎛️ Flow Control
+- **Throttle** - Rate limiting with value dropping
+- **Debounce** - Wait for silence before emitting
+- **Batch** - Group values by size or timeout
+- **FixedInterval** - Consistent value pacing
+
+</td>
+<td width="50%">
+
+### 🔄 Transformations
+- **Map** - Transform values with type safety
+- **Filter** - Select values by predicate
+- **Reduce** - Aggregate to single result
+- **FlatMap** - Transform and flatten
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🏭 Generators
+- **Range** - Numeric sequences
+- **Generate** - Custom generator functions
+- **Repeat** - Infinite value repetition
+- **FromSlice** - Convert slices to channels
+
+</td>
+<td width="50%">
+
+### ⚡ Production Ready
+- **Context-Aware** - Respects cancellation
+- **Type-Safe** - Full generic support
+- **Well-Tested** - Comprehensive coverage
+- **Pipeline API** - Modern fluent interface
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📦 Installation
 
 ```bash
 go get github.com/utkarsh5026/chankit
 ```
 
-## Quick Start
+---
 
-### Traditional Approach (Function Chaining)
+## 🚦 Quick Start
+
+### 📝 Traditional Approach (Function Chaining)
 
 ```go
 import (
@@ -160,7 +158,7 @@ func main() {
 }
 ```
 
-### Modern Pipeline Approach (NEW! ⭐)
+### ⭐ Modern Pipeline Approach (NEW!)
 
 ```go
 import (
@@ -182,13 +180,19 @@ func main() {
 }
 ```
 
-## API Reference
+---
+
+## 📚 API Reference
+
+<div align="center">
 
 ### 🚀 Pipeline API (Fluent Interface)
 
-The Pipeline API provides a modern, chainable interface for channel operations, making your code more readable and maintainable.
+*Modern, chainable interface for channel operations*
 
-#### Creating Pipelines
+</div>
+
+#### 🔨 Creating Pipelines
 
 ```go
 // From a range of numbers
@@ -209,7 +213,7 @@ pipeline := chankit.NewPipeline[int](ctx).Generate(func() (int, bool) {
 pipeline := chankit.NewPipeline[string](ctx).Repeat("ping").Take(10)
 ```
 
-#### Transformation Methods
+#### 🔄 Transformation Methods
 
 ```go
 // Map: Transform each value
@@ -239,7 +243,7 @@ pipeline.FlatMap(func(x int) <-chan int {
 })
 ```
 
-#### Selection Methods
+#### 🎯 Selection Methods
 
 ```go
 // Take: Get first N values
@@ -261,7 +265,7 @@ value, ok := pipeline.First()
 value, ok := pipeline.Last()
 ```
 
-#### Flow Control Methods
+#### 🎛️ Flow Control Methods
 
 ```go
 // Throttle: Rate limit (drops values)
@@ -280,7 +284,7 @@ for batch := range batches {
 }
 ```
 
-#### Side Effects & Observation
+#### 👁️ Side Effects & Observation
 
 ```go
 // Tap: Observe values without modifying
@@ -294,7 +298,7 @@ pipeline.ForEach(func(x int) {
 })
 ```
 
-#### Combining Pipelines
+#### 🔀 Combining Pipelines
 
 ```go
 // Merge: Combine multiple channels
@@ -308,7 +312,7 @@ letters := chankit.FromSlice(ctx, []string{"a", "b", "c", "d"})
 pairs := chankit.ZipWith(numbers, letters.Chan())
 ```
 
-#### Terminal Operations
+#### 🏁 Terminal Operations
 
 ```go
 // ToSlice: Collect all values
@@ -338,7 +342,7 @@ for val := range ch {
 }
 ```
 
-#### Complete Pipeline Example
+#### 💡 Complete Pipeline Example
 
 ```go
 ctx := context.Background()
@@ -355,7 +359,9 @@ result := chankit.RangePipeline(ctx, 1, 1000, 1).
 fmt.Printf("Processed %d values\n", len(result))
 ```
 
-### Flow Control
+---
+
+### 🎛️ Flow Control
 
 #### Throttle
 
@@ -419,7 +425,9 @@ for batch := range batches {
 
 **Use Cases**: Bulk database inserts, batch API requests, log aggregation
 
-### Transformations
+---
+
+### 🔄 Transformations
 
 #### Map
 
@@ -477,7 +485,9 @@ result := chankit.Reduce(ctx, words, func(acc, word string) string {
 }, "")
 ```
 
-### Generators
+---
+
+### 🏭 Generators
 
 #### Generate
 
@@ -527,7 +537,9 @@ evens := chankit.Range(ctx, 0, 10, 2)
 decimals := chankit.Range(ctx, 0.0, 1.0, 0.1)
 ```
 
-### Conversions
+---
+
+### ⚡ Conversions
 
 #### SliceToChan
 
@@ -558,7 +570,9 @@ slice := chankit.ChanToSlice(ctx, ch)
 slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](100))
 ```
 
-## Configuration Options
+---
+
+## ⚙️ Configuration Options
 
 ### Channel Buffering
 
@@ -587,7 +601,9 @@ slice := chankit.ChanToSlice(ctx, ch)
 slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](1000))
 ```
 
-## Patterns and Examples
+---
+
+## 💡 Patterns and Examples
 
 ### Pipeline Pattern
 
@@ -685,7 +701,9 @@ func updateUI(ctx context.Context, events <-chan Event) {
 }
 ```
 
-## Context Cancellation
+---
+
+## 🛑 Context Cancellation
 
 All operations respect context cancellation:
 
@@ -705,7 +723,9 @@ go func() {
 }()
 ```
 
-## Performance Tips
+---
+
+## 🚀 Performance Tips
 
 1. **Use buffered channels** for high-throughput scenarios:
 
@@ -724,7 +744,9 @@ go func() {
    - `FixedInterval`: Preserve all values with consistent spacing
    - `Batch`: Group multiple values for bulk processing
 
-## Testing
+---
+
+## 🧪 Testing
 
 The package includes comprehensive test coverage:
 
@@ -739,15 +761,21 @@ go test -v ./...
 go test -v -run TestDebounce ./chankit
 ```
 
-## License
+---
 
-MIT License - see LICENSE file for details
+## 📄 License
 
-## Contributing
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Comparison with Standard Library
+---
+
+## 📊 Comparison with Standard Library
 
 While Go's standard library provides excellent channel primitives, `chankit` adds:
 
