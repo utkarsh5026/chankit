@@ -2,6 +2,114 @@
 
 A comprehensive Go toolkit for elegant and powerful channel operations. Built with generics for type safety and composability.
 
+<!-- Examples Section -->
+
+<div align="center" style="margin-bottom: 2em;">
+  <h3 style="
+    font-size:2rem;
+    margin:0.8em 0 0.3em 0;
+    letter-spacing:0.01em;
+    color:#334085;"
+  >✨ Example 1: Data Processing Pipeline</h3>
+  <p style="
+    font-size:1.08rem;
+    color:#556;"
+  >
+    <b>Goal:</b> Take numbers <b>1–100</b>, square them, keep only the <b>even</b> results, and collect all outputs.
+  </p>
+  <img
+    src="./images/process-numbers.png"
+    alt="Data Processing Pipeline"
+    style="
+      max-width: 94%; min-width:220px;
+      border-radius: 14px; display:block;
+      margin: 1em auto 1.8em auto;
+      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
+      border: 1.5px solid #e6e6fa;"
+  />
+</div>
+
+---
+
+<div align="center" style="margin-bottom: 2em;">
+  <h3 style="
+    font-size:2rem;
+    margin:0.8em 0 0.3em 0;
+    letter-spacing:0.01em;
+    color:#334085;"
+  >✨ Example 2: Event Stream Processing</h3>
+  <p style="
+    font-size:1.08rem;
+    color:#556;"
+  >
+    <b>Goal:</b> Process event stream &mdash; skip first <b>10</b>, take next <b>20</b>, throttle, then count.
+  </p>
+  <img
+    src="./images/event-processing.png"
+    alt="Event Stream Processing"
+    style="
+      max-width: 94%; min-width:220px;
+      border-radius: 14px; display:block;
+      margin: 1em auto 1.8em auto;
+      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
+      border: 1.5px solid #e6e6fa;"
+  />
+</div>
+
+---
+
+<div align="center" style="margin-bottom: 2em;">
+  <h3 style="
+    font-size:2rem;
+    margin:0.8em 0 0.3em 0;
+    letter-spacing:0.01em;
+    color:#334085;"
+  >✨ Example 3: Data Transformation Stream</h3>
+  <p style="
+    font-size:1.08rem;
+    color:#556;"
+  >
+    <b>Goal:</b> Transform user data &mdash; filter <b>active users</b>, extract <b>emails</b>, batch and process.
+  </p>
+  <img
+    src="./images/data-transform.png"
+    alt="Data Transformation Stream"
+    style="
+      max-width: 94%; min-width:220px;
+      border-radius: 14px; display:block;
+      margin: 1em auto 1.8em auto;
+      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
+      border: 1.5px solid #e6e6fa;"
+  />
+</div>
+
+---
+
+<div align="center" style="margin-bottom: 2em;">
+  <h3 style="
+    font-size:2rem;
+    margin:0.8em 0 0.3em 0;
+    letter-spacing:0.01em;
+    color:#334085;"
+  >✨ Example 4: Real-time Data Analytics</h3>
+  <p style="
+    font-size:1.08rem;
+    color:#556;"
+  >
+    <b>Goal:</b> Process sensor data &mdash; <b>debounce</b> readings, <b>transform</b>, reduce to <b>average</b>.
+  </p>
+  <img
+    src="./images/data-analytics.png"
+    alt="Real-time Data Analytics"
+    style="
+      max-width: 94%; min-width:220px;
+      border-radius: 14px; display:block;
+      margin: 1em auto 1.8em auto;
+      box-shadow: 0 8px 32px rgba(50,78,179,0.14);
+      border: 1.5px solid #e6e6fa;"
+  />
+</div>
+
 ## Features
 
 - **Flow Control**: Throttle, debounce, batch, and fixed-interval processing
@@ -279,6 +387,7 @@ searchResults := chankit.Debounce(ctx, userInput, 300*time.Millisecond)
 **Use Cases**: Search boxes, form validation, resize events, scroll handling
 
 **Key Difference from Throttle**:
+
 - **Throttle**: Emits at fixed intervals (e.g., every 100ms)
 - **Debounce**: Waits for silence before emitting (e.g., 100ms after last input)
 
@@ -599,16 +708,17 @@ go func() {
 ## Performance Tips
 
 1. **Use buffered channels** for high-throughput scenarios:
+
    ```go
    chankit.Map(ctx, input, fn, chankit.WithBuffer[int](100))
    ```
-
 2. **Pre-allocate slices** when collecting known sizes:
+
    ```go
    chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](expectedSize))
    ```
-
 3. **Choose the right flow control**:
+
    - `Throttle`: Drop intermediate values for rate limiting
    - `Debounce`: Wait for activity to stop
    - `FixedInterval`: Preserve all values with consistent spacing
