@@ -779,8 +779,61 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 While Go's standard library provides excellent channel primitives, `chankit` adds:
 
-- **Higher-level abstractions**: Map, Filter, Reduce for functional-style programming
-- **Flow control utilities**: Throttle, Debounce, Batch for common patterns
-- **Type-safe generics**: Compile-time type checking across all operations
-- **Composability**: Easy chaining of operations for complex pipelines
-- **Production-tested**: Comprehensive test coverage for reliability
+<table>
+<tr>
+<td width="50%">
+
+### Standard Library
+```go
+// Manual channel management
+ch := make(chan int)
+go func() {
+    for i := 0; i < 10; i++ {
+        ch <- i * 2
+    }
+    close(ch)
+}()
+
+result := []int{}
+for v := range ch {
+    if v%4 == 0 {
+        result = append(result, v)
+    }
+}
+```
+
+</td>
+<td width="50%">
+
+### chankit
+```go
+// Declarative, composable
+result := chankit.RangePipeline(ctx, 0, 10, 1).
+    Map(func(x int) any { return x * 2 }).
+    Filter(func(x any) bool {
+        return x.(int)%4 == 0
+    }).
+    ToSlice()
+```
+
+</td>
+</tr>
+</table>
+
+### Why chankit?
+
+- **Higher-level abstractions** - Map, Filter, Reduce for functional-style programming
+- **Flow control utilities** - Throttle, Debounce, Batch for common patterns
+- **Type-safe generics** - Compile-time type checking across all operations
+- **Composability** - Easy chaining of operations for complex pipelines
+- **Production-tested** - Comprehensive test coverage for reliability
+
+---
+
+<div align="center">
+
+### Made with ❤️ for the Go community
+
+**[⭐ Star this repo](https://github.com/utkarsh5026/chankit)** if you find it useful!
+
+</div>
