@@ -256,7 +256,6 @@ When requesting features:
 - Be respectful and inclusive
 - Provide constructive feedback
 - Help others learn and grow
-- Follow the [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Questions?
 
