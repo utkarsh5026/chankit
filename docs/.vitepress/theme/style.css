@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom dark theme overrides */
+:root {
+  --vp-c-brand-1: #0ea5e9;
+  --vp-c-brand-2: #38bdf8;
+  --vp-c-brand-3: #0284c7;
+  --vp-c-brand-soft: rgba(14, 165, 233, 0.14);
+
+  /* Dark background colors */
+  --vp-c-bg: #0a0a0a;
+  --vp-c-bg-alt: #111111;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-bg-mute: #1e1e1e;
+
+  /* Dark text colors */
+  --vp-c-text-1: #e5e5e5;
+  --vp-c-text-2: #a3a3a3;
+  --vp-c-text-3: #737373;
+
+  /* Dark border colors */
+  --vp-c-border: #2a2a2a;
+  --vp-c-divider: #2a2a2a;
+  --vp-c-gutter: #1a1a1a;
+
+  /* Code block colors */
+  --vp-code-bg: #111111;
+  --vp-code-block-bg: #111111;
+}
+
+.dark {
+  --vp-c-bg: #0a0a0a;
+  --vp-c-bg-alt: #111111;
+  --vp-c-bg-soft: #1a1a1a;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* Custom container styles */
+.vp-doc {
+  @apply max-w-7xl mx-auto;
+}
+
+/* Enhanced code blocks */
+.vp-code-group {
+  @apply bg-dark-bg-alt border border-dark-border rounded-lg overflow-hidden;
+}
+
+/* Custom link colors */
+.vp-doc a {
+  @apply text-primary-400 hover:text-primary-300 transition-colors;
+}
+
+/* Hero section custom styles */
+.VPHero {
+  @apply bg-gradient-to-br from-dark-bg via-dark-bg-alt to-dark-bg-soft;
+}
+
+/* Feature card grid */
+.VPFeatures {
+  @apply grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+/* Navigation menu */
+.VPNav {
+  @apply backdrop-blur-md bg-dark-bg/80;
+}
+
+/* Sidebar */
+.VPSidebar {
+  @apply bg-dark-bg-alt border-r border-dark-border;
+}
+
+/* Custom animation for hover effects */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(14, 165, 233, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.8);
+  }
+}
+
+.glow-on-hover:hover {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Custom gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary-900/20;
+}
+
+/* Code inline */
+.vp-doc :not(pre) > code {
+  @apply bg-dark-bg-soft text-primary-400 px-2 py-1 rounded;
+}
+
+/* Tables */
+.vp-doc table {
+  @apply border-collapse border border-dark-border;
+}
+
+.vp-doc th,
+.vp-doc td {
+  @apply border border-dark-border px-4 py-2;
+}
+
+.vp-doc th {
+  @apply bg-dark-bg-soft font-semibold;
+}
+
+/* Blockquotes */
+.vp-doc blockquote {
+  @apply border-l-4 border-primary-500 bg-dark-bg-soft pl-4 py-2 my-4 italic;
+}
+
+/* Custom button styles */
+.custom-button {
+  @apply inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  @apply bg-primary-600 hover:bg-primary-700 text-white;
+  @apply hover:shadow-lg hover:shadow-primary-900/30 hover:-translate-y-0.5;
+}
+
+.custom-button-outline {
+  @apply inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  @apply border-2 border-primary-500 text-primary-400 hover:bg-primary-500/10;
+  @apply hover:shadow-lg hover:shadow-primary-900/20;
+}

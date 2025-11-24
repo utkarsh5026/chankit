@@ -11,8 +11,9 @@ Transform the way you work with Go channels using modern, composable pipelines
 [![Go Report Card](https://goreportcard.com/badge/github.com/utkarsh5026/chankit)](https://goreportcard.com/report/github.com/utkarsh5026/chankit)
 [![GoDoc](https://godoc.org/github.com/utkarsh5026/chankit?status.svg)](https://godoc.org/github.com/utkarsh5026/chankit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen.svg)](https://utkarsh5026.github.io/chankit/)
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Examples](#-real-world-examples) • [API Reference](#-api-reference)
+[Documentation](https://utkarsh5026.github.io/chankit/) • [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Examples](#-real-world-examples) • [API Reference](#-api-reference)
 
 </div>
 
