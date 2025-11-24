@@ -32,12 +32,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: |
           cd docs
-          npm ci
+          npm install
 
       - name: Build VitePress site
         run: |
