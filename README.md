@@ -1,110 +1,97 @@
 <div align="center">
 
-# 🔗 chankit
+<img src="./images/logo.svg" alt="chankit logo" width="200"/>
 
-### A comprehensive Go toolkit for elegant and powerful channel operations
+# chankit
 
-Built with generics for type safety and composability
+### *Elegant, Type-Safe Channel Operations for Go*
+
+Transform the way you work with Go channels using modern, composable pipelines
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/utkarsh5026/chankit)](https://goreportcard.com/report/github.com/utkarsh5026/chankit)
 [![GoDoc](https://godoc.org/github.com/utkarsh5026/chankit?status.svg)](https://godoc.org/github.com/utkarsh5026/chankit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-</div>
-
----
-
-## 📖 Table of Contents
-
-- [Examples](#-examples)
-- [Features](#-features)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [API Reference](#-api-reference)
-- [Patterns and Examples](#-patterns-and-examples)
-
----
-
-## ✨ Examples
-
-<div align="center">
-
-### 📊 Example 1: Data Processing Pipeline
-
-**Goal:** Take numbers 1–100, square them, keep only the even results, and collect all outputs.
-
-<img src="./images/process-numbers.png" alt="Data Processing Pipeline" width="800"/>
-
-<br/><br/>
-
----
-
-### 🔄 Example 2: Event Stream Processing
-
-**Goal:** Process event stream — skip first 10, take next 20, throttle, then count.
-
-<img src="./images/event-processing.png" alt="Event Stream Processing" width="800"/>
-
-<br/><br/>
-
----
-
-### 🔀 Example 3: Data Transformation Stream
-
-**Goal:** Transform user data — filter active users, extract emails, batch and process.
-
-<img src="./images/data-transform.png" alt="Data Transformation Stream" width="800"/>
-
-<br/><br/>
-
----
-
-### 📈 Example 4: Real-time Data Analytics
-
-**Goal:** Process sensor data — debounce readings, transform, reduce to average.
-
-<img src="./images/data-analytics.png" alt="Real-time Data Analytics" width="800"/>
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Examples](#-real-world-examples) • [API Reference](#-api-reference)
 
 </div>
 
-<br/>
+---
 
-## 🚀 Features
+## 🎯 What is chankit?
+
+**chankit** is a powerful Go library that brings functional programming patterns to Go channels. Built with generics for complete type safety, it transforms verbose channel operations into elegant, readable pipelines.
+
+### From This...
+```go
+// Traditional Go: Verbose, nested, hard to maintain
+ch := make(chan int)
+go func() {
+    for i := 1; i <= 100; i++ {
+        ch <- i
+    }
+    close(ch)
+}()
+
+ch2 := make(chan int)
+go func() {
+    defer close(ch2)
+    for v := range ch {
+        ch2 <- v * v
+    }
+}()
+
+result := []int{}
+for v := range ch2 {
+    if v%2 == 0 {
+        result = append(result, v)
+    }
+}
+```
+
+### ...To This!
+```go
+// chankit: Clean, expressive, maintainable
+result := chankit.RangePipeline(ctx, 1, 101, 1).
+    Map(func(x int) any { return x * x }).
+    Filter(func(x any) bool { return x.(int)%2 == 0 }).
+    ToSlice()
+```
+
+---
+
+## ✨ Features
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🎛️ Flow Control
+### 🎛️ **Flow Control**
+Control the flow of data with powerful timing operators
 - **Throttle** - Rate limiting with value dropping
 - **Debounce** - Wait for silence before emitting
 - **Batch** - Group values by size or timeout
 - **FixedInterval** - Consistent value pacing
 
-</td>
-<td width="50%">
-
-### 🔄 Transformations
+### 🔄 **Transformations**
+Transform and process data functionally
 - **Map** - Transform values with type safety
 - **Filter** - Select values by predicate
 - **Reduce** - Aggregate to single result
 - **FlatMap** - Transform and flatten
 
 </td>
-</tr>
-<tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🏭 Generators
+### 🏭 **Generators**
+Create channels from various sources
 - **Range** - Numeric sequences
 - **Generate** - Custom generator functions
 - **Repeat** - Infinite value repetition
 - **FromSlice** - Convert slices to channels
 
-</td>
-<td width="50%">
-
-### ⚡ Production Ready
+### ⚡ **Production Ready**
+Built for real-world use
 - **Context-Aware** - Respects cancellation
 - **Type-Safe** - Full generic support
 - **Well-Tested** - Comprehensive coverage
@@ -122,13 +109,88 @@ Built with generics for type safety and composability
 go get github.com/utkarsh5026/chankit
 ```
 
+```go
+import "github.com/utkarsh5026/chankit/chankit"
+```
+
 ---
 
-## 🚦 Quick Start
+## 🚀 Quick Start
 
-### 📝 Traditional Approach (Function Chaining)
+### The Pipeline Pattern
 
 ```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Create a pipeline: numbers 1-100, square them, keep evens, take first 10
+    result := chankit.RangePipeline(ctx, 1, 101, 1).
+        Map(func(x int) any { return x * x }).
+        Filter(func(x any) bool { return x.(int)%2 == 0 }).
+        Take(10).
+        ToSlice()
+
+    fmt.Println(result)
+    // Output: [4 16 36 64 100 144 196 256 324 400]
+}
+```
+
+---
+
+## 💡 Real-World Examples
+
+### 📊 Example 1: Data Processing Pipeline
+
+**Scenario:** Process a stream of numbers - square them, filter for even results, skip the first 10, and take the next 20.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Process numbers 1-100
+    result := chankit.RangePipeline(ctx, 1, 101, 1).
+        Map(func(x int) any { return x * x }).           // Square each number
+        Filter(func(x any) bool {                         // Keep only even squares
+            return x.(int)%2 == 0
+        }).
+        Skip(10).                                         // Skip first 10 results
+        Take(20).                                         // Take next 20
+        ToSlice()                                         // Collect to slice
+
+    fmt.Printf("Processed %d values: %v\n", len(result), result)
+}
+```
+
+**Output:**
+```
+Processed 20 values: [484 576 676 784 900 1024 1156 1296 1444 1600 1764 1936 2116 2304 2500 2704 2916 3136 3364 3600]
+```
+
+---
+
+### 🔄 Example 2: Event Stream Processing
+
+**Scenario:** Build a real-time event processing system that debounces user input, filters events, and batches them for processing.
+
+```go
+package main
+
 import (
     "context"
     "fmt"
@@ -136,47 +198,282 @@ import (
     "github.com/utkarsh5026/chankit/chankit"
 )
 
+type Event struct {
+    Type      string
+    Timestamp time.Time
+    Data      string
+}
+
 func main() {
     ctx := context.Background()
 
-    // Create a range of numbers
-    numbers := chankit.Range(ctx, 1, 10, 1)
+    // Simulate event stream
+    events := make(chan Event, 100)
+    go func() {
+        defer close(events)
+        for i := 0; i < 50; i++ {
+            events <- Event{
+                Type:      "click",
+                Timestamp: time.Now(),
+                Data:      fmt.Sprintf("event-%d", i),
+            }
+            time.Sleep(10 * time.Millisecond)
+        }
+    }()
 
-    // Transform with Map
-    doubled := chankit.Map(ctx, numbers, func(x int) int {
-        return x * 2
-    })
+    // Process events: debounce, filter, and batch
+    batches := chankit.From(ctx, events).
+        Debounce(50 * time.Millisecond).                  // Wait for 50ms silence
+        Filter(func(e Event) bool {                       // Filter specific events
+            return e.Type == "click"
+        }).
+        Batch(5, 200*time.Millisecond)                    // Batch 5 or every 200ms
 
-    // Filter even numbers
-    evens := chankit.Filter(ctx, doubled, func(x int) bool {
-        return x%4 == 0
-    })
-
-    // Collect to slice
-    result := chankit.ChanToSlice(ctx, evens)
-    fmt.Println(result) // [4, 8, 12, 16]
+    // Process batches
+    for batch := range batches {
+        fmt.Printf("Processing batch of %d events\n", len(batch))
+    }
 }
 ```
 
-### ⭐ Modern Pipeline Approach (NEW!)
+---
+
+### 🔀 Example 3: Data Transformation Stream
+
+**Scenario:** Transform user data by filtering active users, extracting emails, and processing in batches.
 
 ```go
+package main
+
 import (
     "context"
     "fmt"
+    "strings"
+    "time"
     "github.com/utkarsh5026/chankit/chankit"
 )
+
+type User struct {
+    ID     int
+    Name   string
+    Email  string
+    Active bool
+}
 
 func main() {
     ctx := context.Background()
 
-    // Same logic, much cleaner syntax with Pipeline API
-    result := chankit.RangePipeline(ctx, 1, 10, 1).
-        Map(func(x int) any { return x * 2 }).
-        Filter(func(x any) bool { return x.(int)%4 == 0 }).
-        ToSlice()
+    // Sample users
+    users := []User{
+        {1, "Alice", "alice@example.com", true},
+        {2, "Bob", "bob@example.com", false},
+        {3, "Charlie", "charlie@example.com", true},
+        {4, "Diana", "diana@example.com", true},
+        {5, "Eve", "eve@example.com", false},
+    }
 
-    fmt.Println(result) // [4, 8, 12, 16]
+    // Transform: active users → emails → uppercase → batch
+    batches := chankit.FromSlice(ctx, users).
+        Filter(func(u User) bool { return u.Active }).    // Active users only
+        Map(func(u User) any { return u.Email }).         // Extract emails
+        Map(func(e any) any {                             // Uppercase emails
+            return strings.ToUpper(e.(string))
+        }).
+        Batch(2, 100*time.Millisecond)                    // Batch for processing
+
+    // Process email batches
+    for batch := range batches {
+        fmt.Printf("Email batch: %v\n", batch)
+    }
+    // Output:
+    // Email batch: [ALICE@EXAMPLE.COM CHARLIE@EXAMPLE.COM]
+    // Email batch: [DIANA@EXAMPLE.COM]
+}
+```
+
+---
+
+### 📈 Example 4: Real-Time Sensor Data Analytics
+
+**Scenario:** Process high-frequency sensor readings, debounce them to reduce noise, transform values, and calculate running averages.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "math/rand"
+    "time"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+type SensorReading struct {
+    SensorID  string
+    Value     float64
+    Timestamp time.Time
+}
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+    defer cancel()
+
+    // Simulate sensor data stream
+    readings := make(chan SensorReading, 100)
+    go func() {
+        defer close(readings)
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case readings <- SensorReading{
+                SensorID:  "temp-01",
+                Value:     20 + rand.Float64()*10,
+                Timestamp: time.Now(),
+            }:
+                time.Sleep(10 * time.Millisecond)
+            }
+        }
+    }()
+
+    // Process: debounce → transform to Celsius → calculate average
+    processed := chankit.From(ctx, readings).
+        Debounce(100 * time.Millisecond).                 // Reduce noise
+        Map(func(r SensorReading) any {                   // Transform value
+            return r.Value * 1.5 // Simulate transformation
+        }).
+        Take(10)                                          // Take first 10
+
+    // Calculate average
+    sum := 0.0
+    count := 0
+    processed.ForEach(func(v any) {
+        sum += v.(float64)
+        count++
+        fmt.Printf("Reading #%d: %.2f\n", count, v.(float64))
+    })
+
+    if count > 0 {
+        fmt.Printf("\nAverage: %.2f\n", sum/float64(count))
+    }
+}
+```
+
+---
+
+### 🔍 Example 5: Search-As-You-Type with Debouncing
+
+**Scenario:** Implement an efficient search system that waits for the user to stop typing before executing the search.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "strings"
+    "time"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+func performSearch(query string) []string {
+    // Simulate search results
+    database := []string{"apple", "application", "apply", "banana", "band", "bandana"}
+    results := []string{}
+    for _, item := range database {
+        if strings.Contains(strings.ToLower(item), strings.ToLower(query)) {
+            results = append(results, item)
+        }
+    }
+    return results
+}
+
+func main() {
+    ctx := context.Background()
+
+    // Simulate user typing
+    userInput := make(chan string, 10)
+    go func() {
+        defer close(userInput)
+        queries := []string{"a", "ap", "app", "appl", "apple"}
+        for _, q := range queries {
+            userInput <- q
+            time.Sleep(50 * time.Millisecond)
+        }
+    }()
+
+    // Debounce and search
+    results := chankit.From(ctx, userInput).
+        Debounce(200 * time.Millisecond).                 // Wait for typing to stop
+        Filter(func(q string) bool { return len(q) >= 2 }).// Min 2 chars
+        Map(func(q string) any {                          // Perform search
+            fmt.Printf("Searching for: %s\n", q)
+            return performSearch(q)
+        })
+
+    // Display results
+    results.ForEach(func(r any) {
+        fmt.Printf("Results: %v\n", r)
+    })
+}
+```
+
+---
+
+### ⚡ Example 6: Rate-Limited API Calls
+
+**Scenario:** Make API calls at a controlled rate to avoid hitting rate limits.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+    "github.com/utkarsh5026/chankit/chankit"
+)
+
+type APIRequest struct {
+    ID       int
+    Endpoint string
+}
+
+func callAPI(req APIRequest) string {
+    // Simulate API call
+    return fmt.Sprintf("Response for request %d", req.ID)
+}
+
+func main() {
+    ctx := context.Background()
+
+    // Create 20 API requests
+    requests := make([]APIRequest, 20)
+    for i := 0; i < 20; i++ {
+        requests[i] = APIRequest{
+            ID:       i + 1,
+            Endpoint: "/api/data",
+        }
+    }
+
+    // Process at most 10 requests per second (100ms interval)
+    fmt.Println("Making rate-limited API calls...")
+    start := time.Now()
+
+    chankit.FromSlice(ctx, requests).
+        FixedInterval(100 * time.Millisecond).            // 10 per second max
+        Tap(func(req APIRequest) {                        // Log progress
+            fmt.Printf("[%s] Processing request %d\n",
+                time.Since(start).Round(time.Millisecond), req.ID)
+        }).
+        Map(func(req APIRequest) any {                    // Make API call
+            return callAPI(req)
+        }).
+        ForEach(func(resp any) {                          // Handle responses
+            // Process response
+        })
+
+    fmt.Printf("Completed in %s\n", time.Since(start).Round(time.Millisecond))
 }
 ```
 
@@ -184,536 +481,134 @@ func main() {
 
 ## 📚 API Reference
 
-<div align="center">
+### 🔨 Creating Pipelines
 
-### 🚀 Pipeline API (Fluent Interface)
+| Method | Description | Example |
+|--------|-------------|---------|
+| `RangePipeline(ctx, start, end, step)` | Create from numeric range | `RangePipeline(ctx, 1, 100, 1)` |
+| `FromSlice(ctx, slice)` | Create from slice | `FromSlice(ctx, []int{1,2,3})` |
+| `From(ctx, channel)` | Create from existing channel | `From(ctx, myChan)` |
+| `NewPipeline[T](ctx)` | Create empty pipeline | `NewPipeline[int](ctx)` |
 
-*Modern, chainable interface for channel operations*
+### 🔄 Transformation Methods
 
-</div>
+| Method | Description | Example |
+|--------|-------------|---------|
+| `Map(fn)` | Transform each value | `.Map(func(x int) any { return x * 2 })` |
+| `MapTo[R](fn)` | Type-safe map | `MapTo(p, func(x int) string { ... })` |
+| `Filter(fn)` | Keep matching values | `.Filter(func(x int) bool { return x > 10 })` |
+| `FlatMap(fn)` | Transform and flatten | `.FlatMap(func(x int) <-chan int { ... })` |
 
-#### 🔨 Creating Pipelines
+### 🎯 Selection Methods
 
-```go
-// From a range of numbers
-pipeline := chankit.RangePipeline(ctx, 1, 100, 1)
+| Method | Description | Example |
+|--------|-------------|---------|
+| `Take(n)` | Take first N values | `.Take(10)` |
+| `Skip(n)` | Skip first N values | `.Skip(5)` |
+| `TakeWhile(fn)` | Take while predicate true | `.TakeWhile(func(x int) bool { return x < 100 })` |
+| `SkipWhile(fn)` | Skip while predicate true | `.SkipWhile(func(x int) bool { return x < 0 })` |
+| `First()` | Get first value | `value, ok := pipeline.First()` |
+| `Last()` | Get last value | `value, ok := pipeline.Last()` |
 
-// From an existing slice
-pipeline := chankit.FromSlice(ctx, []int{1, 2, 3, 4, 5})
+### 🎛️ Flow Control Methods
 
-// From an existing channel
-pipeline := chankit.From(ctx, myChan)
+| Method | Description | Use Case | Example |
+|--------|-------------|----------|---------|
+| `Throttle(duration)` | Emit at fixed intervals, drop extras | UI updates, high-frequency events | `.Throttle(100*time.Millisecond)` |
+| `Debounce(duration)` | Wait for silence before emitting | Search boxes, form validation | `.Debounce(300*time.Millisecond)` |
+| `FixedInterval(duration)` | Pace values without dropping | Rate-limited API calls | `.FixedInterval(100*time.Millisecond)` |
+| `Batch(size, timeout)` | Group into batches | Bulk database inserts | `.Batch(100, 5*time.Second)` |
 
-// Generate values
-pipeline := chankit.NewPipeline[int](ctx).Generate(func() (int, bool) {
-    return getValue(), hasMore()
-})
+### 🔀 Combining Pipelines
 
-// Repeat a value
-pipeline := chankit.NewPipeline[string](ctx).Repeat("ping").Take(10)
-```
+| Method | Description | Example |
+|--------|-------------|---------|
+| `Merge(channels...)` | Combine multiple channels | `p1.Merge(p2.Chan(), p3.Chan())` |
+| `ZipWith(other)` | Pair values from two channels | `ZipWith(p1, p2.Chan())` |
 
-#### 🔄 Transformation Methods
+### 🏁 Terminal Operations
 
-```go
-// Map: Transform each value
-pipeline.Map(func(x int) any { return x * 2 })
+| Method | Description | Blocking | Example |
+|--------|-------------|----------|---------|
+| `ToSlice()` | Collect all values | Yes | `result := pipeline.ToSlice()` |
+| `Reduce(fn, initial)` | Aggregate values | Yes | `.Reduce(func(a,b int) int { return a+b }, 0)` |
+| `Count()` | Count values | Yes | `count := pipeline.Count()` |
+| `ForEach(fn)` | Execute for each | Yes | `.ForEach(func(x int) { fmt.Println(x) })` |
+| `Any(fn)` | Check if any match | Yes | `.Any(func(x int) bool { return x > 10 })` |
+| `All(fn)` | Check if all match | Yes | `.All(func(x int) bool { return x > 0 })` |
+| `Chan()` | Get underlying channel | No | `ch := pipeline.Chan()` |
 
-// MapTo: Type-safe transformation (recommended)
-chankit.MapTo(pipeline, func(x int) string { return fmt.Sprint(x) })
+### 👁️ Observation Methods
 
-// Filter: Keep only matching values
-pipeline.Filter(func(x int) bool { return x > 10 })
+| Method | Description | Example |
+|--------|-------------|---------|
+| `Tap(fn)` | Observe without modifying | `.Tap(func(x int) { log.Println(x) })` |
 
-// Where: Alias for Filter (LINQ-style)
-pipeline.Where(func(x int) bool { return x%2 == 0 })
+---
 
-// Select: Alias for Map (LINQ-style)
-pipeline.Select(func(x int) any { return x * 2 })
+## 🎨 Advanced Patterns
 
-// FlatMap: Transform and flatten
-pipeline.FlatMap(func(x int) <-chan int {
-    ch := make(chan int, 2)
-    go func() {
-        defer close(ch)
-        ch <- x
-        ch <- x * 10
-    }()
-    return ch
-})
-```
-
-#### 🎯 Selection Methods
-
-```go
-// Take: Get first N values
-pipeline.Take(10)
-
-// Skip: Skip first N values
-pipeline.Skip(5)
-
-// TakeWhile: Take while predicate is true
-pipeline.TakeWhile(func(x int) bool { return x < 100 })
-
-// SkipWhile: Skip while predicate is true
-pipeline.SkipWhile(func(x int) bool { return x < 0 })
-
-// First: Get first value
-value, ok := pipeline.First()
-
-// Last: Get last value
-value, ok := pipeline.Last()
-```
-
-#### 🎛️ Flow Control Methods
+### Pattern 1: Complex Data Pipeline
 
 ```go
-// Throttle: Rate limit (drops values)
-pipeline.Throttle(100 * time.Millisecond)
-
-// Debounce: Wait for silence
-pipeline.Debounce(300 * time.Millisecond)
-
-// FixedInterval: Pace values (preserves all)
-pipeline.FixedInterval(100 * time.Millisecond)
-
-// Batch: Group into batches
-batches := pipeline.Batch(10, 1*time.Second)
-for batch := range batches {
-    fmt.Printf("Got %d items\n", len(batch))
-}
-```
-
-#### 👁️ Side Effects & Observation
-
-```go
-// Tap: Observe values without modifying
-pipeline.Tap(func(x int) {
-    fmt.Printf("Processing: %d\n", x)
-})
-
-// ForEach: Execute for each value (terminal)
-pipeline.ForEach(func(x int) {
-    fmt.Println(x)
-})
-```
-
-#### 🔀 Combining Pipelines
-
-```go
-// Merge: Combine multiple channels
-ch1 := chankit.RangePipeline(ctx, 1, 5, 1)
-ch2 := chankit.RangePipeline(ctx, 10, 15, 1)
-merged := ch1.Merge(ch2.Chan())
-
-// ZipWith: Pair values from two channels
-numbers := chankit.RangePipeline(ctx, 1, 5, 1)
-letters := chankit.FromSlice(ctx, []string{"a", "b", "c", "d"})
-pairs := chankit.ZipWith(numbers, letters.Chan())
-```
-
-#### 🏁 Terminal Operations
-
-```go
-// ToSlice: Collect all values
-result := pipeline.ToSlice()
-
-// Reduce: Aggregate values
-sum := pipeline.Reduce(func(acc, x int) int { return acc + x }, 0)
-
-// ReduceTo: Reduce with type change
-str := chankit.ReduceTo(pipeline, func(acc string, x int) string {
-    return acc + fmt.Sprint(x)
-}, "")
-
-// Count: Count values
-count := pipeline.Count()
-
-// Any: Check if any value matches
-hasEven := pipeline.Any(func(x int) bool { return x%2 == 0 })
-
-// All: Check if all values match
-allPositive := pipeline.All(func(x int) bool { return x > 0 })
-
-// Chan: Get underlying channel
-ch := pipeline.Chan()
-for val := range ch {
-    // process val
-}
-```
-
-#### 💡 Complete Pipeline Example
-
-```go
-ctx := context.Background()
-
-// Complex data processing pipeline
+// Multi-stage data processing with logging
 result := chankit.RangePipeline(ctx, 1, 1000, 1).
-    Filter(func(x int) bool { return x%2 == 0 }).    // Even numbers only
-    Map(func(x int) any { return x * x }).           // Square them
-    Tap(func(x any) { log.Printf("Value: %v", x) }). // Log each value
-    Skip(10).                                         // Skip first 10
-    Take(20).                                         // Take next 20
-    ToSlice()                                         // Collect results
-
-fmt.Printf("Processed %d values\n", len(result))
-```
-
----
-
-### 🎛️ Flow Control
-
-#### Throttle
-
-Limits the rate of values by emitting only the most recent value within each time interval. Intermediate values are dropped.
-
-```go
-// Rate limit to 1 value per 100ms (drops intermediate values)
-throttled := chankit.Throttle(ctx, input, 100*time.Millisecond)
-
-// With buffered output
-throttled := chankit.Throttle(ctx, input, 100*time.Millisecond,
-    chankit.WithBuffer[int](10))
-```
-
-**Use Cases**: UI updates, high-frequency event handling, reducing API call frequency
-
-#### Debounce
-
-Emits values only after a period of silence. Timer resets on each new value. Perfect for handling bursts where only the final value matters.
-
-```go
-// Wait 200ms of silence before emitting
-debounced := chankit.Debounce(ctx, input, 200*time.Millisecond)
-
-// Search box example
-searchResults := chankit.Debounce(ctx, userInput, 300*time.Millisecond)
-```
-
-**Use Cases**: Search boxes, form validation, resize events, scroll handling
-
-**Key Difference from Throttle**:
-
-- **Throttle**: Emits at fixed intervals (e.g., every 100ms)
-- **Debounce**: Waits for silence before emitting (e.g., 100ms after last input)
-
-#### FixedInterval
-
-Processes every value at a fixed rate. Unlike Throttle, no values are dropped - they're queued and emitted with consistent spacing.
-
-```go
-// Emit one value every 100ms (all values preserved)
-paced := chankit.FixedInterval(ctx, input, 100*time.Millisecond)
-```
-
-**Use Cases**: Rate-limited API calls, paced downloads, consistent processing rate
-
-#### Batch
-
-Groups values into batches based on size or timeout, whichever comes first.
-
-```go
-// Batch by size (3 items) or timeout (100ms)
-batches := chankit.Batch(ctx, input, 3, 100*time.Millisecond)
-
-// Process batches
-for batch := range batches {
-    fmt.Printf("Processing %d items\n", len(batch))
-    // Process batch...
-}
-```
-
-**Use Cases**: Bulk database inserts, batch API requests, log aggregation
-
----
-
-### 🔄 Transformations
-
-#### Map
-
-Transforms each value using a function. Can change the type.
-
-```go
-// Double values
-doubled := chankit.Map(ctx, numbers, func(x int) int {
-    return x * 2
-})
-
-// Convert types
-strings := chankit.Map(ctx, numbers, func(x int) string {
-    return fmt.Sprintf("num_%d", x)
-})
-```
-
-#### Filter
-
-Emits only values that satisfy a predicate.
-
-```go
-// Even numbers only
-evens := chankit.Filter(ctx, numbers, func(x int) bool {
-    return x%2 == 0
-})
-
-// Positive numbers
-positive := chankit.Filter(ctx, numbers, func(x int) bool {
-    return x > 0
-})
-```
-
-#### Reduce
-
-Aggregates all values into a single result. This is a blocking operation.
-
-```go
-// Sum all values
-sum := chankit.Reduce(ctx, numbers, func(acc, x int) int {
-    return acc + x
-}, 0)
-
-// Find maximum
-max := chankit.Reduce(ctx, numbers, func(max, x int) int {
-    if x > max {
-        return x
-    }
-    return max
-}, 0)
-
-// Concatenate strings
-result := chankit.Reduce(ctx, words, func(acc, word string) string {
-    return acc + " " + word
-}, "")
-```
-
----
-
-### 🏭 Generators
-
-#### Generate
-
-Creates a channel from a generator function.
-
-```go
-// Fibonacci sequence
-fib := chankit.Generate(ctx, func() (int, bool) {
-    // Return (value, true) to emit, or (zero, false) to stop
-    val := computeNext()
-    return val, val < 1000
-})
-
-// With buffering
-buffered := chankit.Generate(ctx, genFunc, chankit.WithBuffer[int](10))
-```
-
-#### Repeat
-
-Infinitely repeats a value until context is cancelled.
-
-```go
-// Repeat "ping" forever
-pings := chankit.Repeat(ctx, "ping")
-
-// Use with context timeout
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-defer cancel()
-heartbeats := chankit.Repeat(ctx, "heartbeat")
-```
-
-#### Range
-
-Generates a sequence of numbers.
-
-```go
-// 0 to 9
-range1 := chankit.Range(ctx, 0, 10, 1)
-
-// Countdown: 10 to 1
-countdown := chankit.Range(ctx, 10, 0, -1)
-
-// Even numbers: 0, 2, 4, 6, 8
-evens := chankit.Range(ctx, 0, 10, 2)
-
-// Works with float64
-decimals := chankit.Range(ctx, 0.0, 1.0, 0.1)
-```
-
----
-
-### ⚡ Conversions
-
-#### SliceToChan
-
-Converts a slice to a channel.
-
-```go
-slice := []int{1, 2, 3, 4, 5}
-
-// Unbuffered
-ch := chankit.SliceToChan(ctx, slice)
-
-// Buffered with custom size
-ch := chankit.SliceToChan(ctx, slice, chankit.WithBuffer[int](10))
-
-// Auto-sized buffer (matches slice length)
-ch := chankit.SliceToChan(ctx, slice, chankit.WithBufferAuto[int]())
-```
-
-#### ChanToSlice
-
-Collects all values from a channel into a slice. Blocks until channel closes.
-
-```go
-// Default capacity
-slice := chankit.ChanToSlice(ctx, ch)
-
-// Pre-allocate for better performance
-slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](100))
-```
-
----
-
-## ⚙️ Configuration Options
-
-### Channel Buffering
-
-Control output channel buffer sizes for better performance:
-
-```go
-// Unbuffered (default)
-ch := chankit.Map(ctx, input, fn)
-
-// Custom buffer size
-ch := chankit.Map(ctx, input, fn, chankit.WithBuffer[int](50))
-
-// Auto-sized (for SliceToChan only)
-ch := chankit.SliceToChan(ctx, slice, chankit.WithBufferAuto[int]())
-```
-
-### Slice Pre-allocation
-
-Optimize memory allocation when collecting channels:
-
-```go
-// Default (zero capacity)
-slice := chankit.ChanToSlice(ctx, ch)
-
-// Pre-allocate if you know approximate size
-slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](1000))
-```
-
----
-
-## 💡 Patterns and Examples
-
-### Pipeline Pattern
-
-#### Traditional Function Chaining vs. Modern Pipeline API
-
-```go
-ctx := context.Background()
-
-// ❌ Old way: Deeply nested, hard to read
-result := chankit.ChanToSlice(ctx,
-    chankit.Filter(ctx,
-        chankit.Map(ctx,
-            chankit.Range(ctx, 1, 100, 1),
-            func(x int) int { return x * x },
-        ),
-        func(x int) bool { return x%2 == 0 },
-    ),
-)
-
-// ✅ New way: Clean, readable, maintainable
-result := chankit.RangePipeline(ctx, 1, 100, 1).
+    Tap(func(x int) { log.Printf("Input: %d", x) }).
+    Filter(func(x int) bool { return x%2 == 0 }).
+    Tap(func(x int) { log.Printf("After filter: %d", x) }).
     Map(func(x int) any { return x * x }).
-    Filter(func(x any) bool { return x.(int)%2 == 0 }).
+    Skip(10).
+    Take(20).
+    Tap(func(x any) { log.Printf("Final: %v", x) }).
     ToSlice()
 ```
 
-### Debounced Search
-
-Implement efficient search-as-you-type:
+### Pattern 2: Fan-Out/Fan-In
 
 ```go
-// Traditional approach
-func handleSearch(ctx context.Context, userInput <-chan string) <-chan []Result {
-    debounced := chankit.Debounce(ctx, userInput, 300*time.Millisecond)
-    return chankit.Map(ctx, debounced, func(query string) []Result {
-        return performSearch(query)
-    })
-}
+// Process data through multiple parallel pipelines
+ctx := context.Background()
+source := chankit.RangePipeline(ctx, 1, 100, 1)
 
-// Pipeline approach
-func handleSearchPipeline(ctx context.Context, userInput <-chan string) <-chan any {
-    return chankit.From(ctx, userInput).
-        Debounce(300*time.Millisecond).
-        Map(func(query string) any { return performSearch(query) }).
-        Chan()
-}
+// Fan-out: multiple processing pipelines
+evens := source.Filter(func(x int) bool { return x%2 == 0 })
+odds := source.Filter(func(x int) bool { return x%2 != 0 })
+
+// Fan-in: merge results
+merged := evens.Merge(odds.Chan())
+result := merged.ToSlice()
 ```
 
-### Rate-Limited API Calls
-
-Process items with rate limiting:
+### Pattern 3: Conditional Processing
 
 ```go
-func processItems(ctx context.Context, items []Item) {
-    // Convert to channel
-    itemChan := chankit.SliceToChan(ctx, items)
-
-    // Process at most 10 items per second
-    paced := chankit.FixedInterval(ctx, itemChan, 100*time.Millisecond)
-
-    // Make API calls
-    for item := range paced {
-        apiClient.Process(item)
-    }
-}
-```
-
-### Batch Processing
-
-Efficiently batch database operations:
-
-```go
-func saveRecords(ctx context.Context, records <-chan Record) {
-    // Batch 100 records or every 5 seconds
-    batches := chankit.Batch(ctx, records, 100, 5*time.Second)
-
-    for batch := range batches {
-        db.BulkInsert(batch)
-    }
-}
-```
-
-### Throttled UI Updates
-
-Prevent excessive UI redraws:
-
-```go
-func updateUI(ctx context.Context, events <-chan Event) {
-    // Update at most every 16ms (~60 FPS)
-    throttled := chankit.Throttle(ctx, events, 16*time.Millisecond)
-
-    for event := range throttled {
-        renderUI(event)
-    }
-}
+// Different processing based on value
+result := chankit.FromSlice(ctx, data).
+    Map(func(x int) any {
+        if x > 100 {
+            return x * 2
+        } else if x > 50 {
+            return x * 1.5
+        }
+        return x
+    }).
+    ToSlice()
 ```
 
 ---
 
 ## 🛑 Context Cancellation
 
-All operations respect context cancellation:
+All operations respect context cancellation for graceful shutdowns:
 
 ```go
 // Timeout after 5 seconds
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 defer cancel()
 
-// Will stop after timeout
-result := chankit.ChanToSlice(ctx, longRunningChannel)
+result := chankit.RangePipeline(ctx, 1, 1000000, 1).
+    Map(func(x int) any { return expensiveOperation(x) }).
+    ToSlice() // Stops after 5 seconds
 
 // Manual cancellation
 ctx, cancel := context.WithCancel(context.Background())
@@ -721,77 +616,81 @@ go func() {
     time.Sleep(1 * time.Second)
     cancel() // Stop all operations
 }()
+
+pipeline := chankit.From(ctx, channel).
+    Map(func(x int) any { return process(x) })
 ```
 
 ---
 
-## 🚀 Performance Tips
+## ⚙️ Configuration & Performance
 
-1. **Use buffered channels** for high-throughput scenarios:
+### Buffering
 
-   ```go
-   chankit.Map(ctx, input, fn, chankit.WithBuffer[int](100))
-   ```
-2. **Pre-allocate slices** when collecting known sizes:
+Control channel buffer sizes for better performance:
 
-   ```go
-   chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](expectedSize))
-   ```
+```go
+// Custom buffer size for high-throughput
+ch := chankit.Map(ctx, input, fn, chankit.WithBuffer[int](100))
+
+// Auto-sized buffer for SliceToChan
+ch := chankit.SliceToChan(ctx, slice, chankit.WithBufferAuto[int]())
+```
+
+### Pre-allocation
+
+Optimize memory when collecting:
+
+```go
+// Pre-allocate if you know the size
+slice := chankit.ChanToSlice(ctx, ch, chankit.WithCapacity[int](1000))
+```
+
+### Performance Tips
+
+1. **Use buffered channels** for high-throughput scenarios
+2. **Pre-allocate slices** when you know the expected size
 3. **Choose the right flow control**:
-
-   - `Throttle`: Drop intermediate values for rate limiting
-   - `Debounce`: Wait for activity to stop
-   - `FixedInterval`: Preserve all values with consistent spacing
-   - `Batch`: Group multiple values for bulk processing
+   - `Throttle` - Drop values for rate limiting
+   - `Debounce` - Wait for activity to stop
+   - `FixedInterval` - Preserve all values
+   - `Batch` - Group for bulk operations
 
 ---
 
 ## 🧪 Testing
 
-The package includes comprehensive test coverage:
-
 ```bash
 # Run all tests
 go test ./...
 
-# Run with verbose output
-go test -v ./...
+# Run with coverage
+go test -cover ./...
 
 # Run specific test
-go test -v -run TestDebounce ./chankit
+go test -v -run TestThrottle ./chankit
+
+# Benchmark
+go test -bench=. ./chankit
 ```
 
 ---
 
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## 📊 Comparison with Standard Library
-
-While Go's standard library provides excellent channel primitives, `chankit` adds:
+## 📊 Why chankit?
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### Standard Library
+### ❌ Standard Library
 ```go
-// Manual channel management
+// Verbose, error-prone
 ch := make(chan int)
 go func() {
+    defer close(ch)
     for i := 0; i < 10; i++ {
         ch <- i * 2
     }
-    close(ch)
 }()
 
 result := []int{}
@@ -802,12 +701,19 @@ for v := range ch {
 }
 ```
 
-</td>
-<td width="50%">
+**Issues:**
+- Manual goroutine management
+- Error-prone close handling
+- Hard to compose operations
+- No context support built-in
+- Verbose and repetitive
 
-### chankit
+</td>
+<td width="50%" valign="top">
+
+### ✅ chankit
 ```go
-// Declarative, composable
+// Clean, declarative
 result := chankit.RangePipeline(ctx, 0, 10, 1).
     Map(func(x int) any { return x * 2 }).
     Filter(func(x any) bool {
@@ -816,17 +722,43 @@ result := chankit.RangePipeline(ctx, 0, 10, 1).
     ToSlice()
 ```
 
+**Advantages:**
+- Declarative, readable code
+- Automatic resource management
+- Easy composition and chaining
+- Built-in context support
+- Type-safe with generics
+- Production-tested patterns
+
 </td>
 </tr>
 </table>
 
-### Why chankit?
+### Key Benefits
 
-- **Higher-level abstractions** - Map, Filter, Reduce for functional-style programming
+- **Higher-level abstractions** - Map, Filter, Reduce for functional programming
 - **Flow control utilities** - Throttle, Debounce, Batch for common patterns
-- **Type-safe generics** - Compile-time type checking across all operations
-- **Composability** - Easy chaining of operations for complex pipelines
-- **Production-tested** - Comprehensive test coverage for reliability
+- **Type-safe generics** - Compile-time type checking
+- **Composability** - Easy chaining for complex pipelines
+- **Production-tested** - Comprehensive test coverage
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -835,5 +767,9 @@ result := chankit.RangePipeline(ctx, 0, 10, 1).
 ### Made with ❤️ for the Go community
 
 **[⭐ Star this repo](https://github.com/utkarsh5026/chankit)** if you find it useful!
+
+---
+
+*chankit - Transform channels, elevate code*
 
 </div>
